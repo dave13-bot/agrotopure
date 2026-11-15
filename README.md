@@ -1,53 +1,46 @@
-# AgroShift Michoacán · AgroSmart MX
+# AGROTOPURE
 
-Dashboard de parcela con estado inicial vacío. No se crean parcelas ni lecturas de demostración automáticamente. Los polígonos y coordenadas son introducidos por el usuario; cada vértice se guarda localmente en el navegador. NASA POWER es la fuente de variables diarias meteorológicas; NASA GIBS/Worldview aporta mosaicos satelitales de reflectancia MODIS. El mapa base es OpenStreetMap.
+**Plataforma híbrida de decisión agrícola que fusiona telemetría satelital de la NASA con sensores IoT subterráneos (Δ) para optimizar la rotación de cultivos y la salud del suelo en Michoacán.**
 
-## Requisitos y ejecución local
+AGROTOPURE es una plataforma web y móvil de inteligencia agrícola desarrollada para el reto **Field Shift de NASA Space Apps 2026**, diseñada para optimizar la rotación de cultivos, regenerar el suelo y fortalecer la resiliencia climática. Su núcleo es un motor de **Fusión de Datos (Δ)** que cruza información macroscópica de satélites de la NASA (POWER, SMAP, MODIS, ECOSTRESS y SRTM) con telemetría microscópica de sensores IoT en parcela (humedad a 25 cm, temperatura radicular y pH), corrigiendo puntos ciegos espaciales para detectar ventanas de siembra ocultas y reducir el consumo de riego. Evalúa la compatibilidad del terreno con cultivos clave de Michoacán (maíz, aguacate, berries, trigo y hortalizas), mapea un calendario anual de vulnerabilidad del suelo y compara tres estrategias de rotación según las prioridades de cada productor.
 
-- Node.js 20 LTS o posterior.
-- Para el API local: Azure Functions Core Tools v4.
+## Menú
+| Sección | Qué hace |
+|---|---|
+| **Inicio** | Clima NASA POWER de la parcela activa, estado Δ y tus parcelas. |
+| **Parcelas** | Alta/edición: dibujando las esquinas en el mapa o escribiendo/pegando las coordenadas de cada esquina (decimal o GMS). Área y centroide automáticos. |
+| **Análisis** | Fusión Δ, clima 60 días (NASA POWER + ETo FAO-56), NDVI y temperatura MODIS, compatibilidad de cultivos, calendario de vulnerabilidad y 3 estrategias de rotación. |
+| **Sensores** | Dispositivos ESP32/Raspberry Pi con llave propia, histórico, tendencia, predicción de riego, captura manual (pH, CE, materia orgánica, NPK, textura) y CSV. |
+| **Plantas** | Repositorio de 73 cultivos (68 de la guía agronómica corregida + aguacate y berries) con cuidados, condiciones y aptitud en tu parcela. |
+| **Cuenta** | Perfil, prioridades, cierre de sesión y borrado de datos. |
 
+## Fuentes de datos (solo NASA)
+- **NASA POWER** (LaRC) Daily y Climatology, comunidad AG: T2M, extremos, rocío, HR, lluvia, radiación, viento, presión, temperatura de superficie y humedad de suelo GWETTOP/GWETROOT/GWETPROF.
+- **ORNL DAAC (NASA)** MODIS Land Product Subsets: NDVI MOD13Q1 (250 m) y temperatura de superficie MOD11A2 (1 km).
+- **NASA GIBS** (capas de mapa): HLS 30 m, NDVI MODIS, SMAP L4 humedad superficial y radicular, temperatura MODIS, ECOSTRESS y relieve.
+
+Los mapas base (Esri, OpenStreetMap) solo sirven como referencia visual para dibujar la parcela.
+
+## Cuentas y almacenamiento
+- Inicio de sesión con **GitHub o Microsoft** mediante la autenticación integrada de Azure Static Web Apps. Cada cuenta solo ve sus parcelas, dispositivos y lecturas.
+- Datos en **Azure Table Storage**. Configura en Azure Portal → Static Web App → *Environment variables*:
+  `AZURE_STORAGE_CONNECTION_STRING = <cadena de conexión de una cuenta de almacenamiento>`.
+  Sin esta variable la app funciona en modo local (datos en el navegador) y avisa en pantalla.
+- Modo invitado sin cuenta: datos solo en el navegador.
+
+## Sensores
+Firmware listo en [`firmware/`](firmware/): ESP32 (deep sleep, cola offline) y Raspberry Pi (servicio systemd). Envían a `POST /api/ingest` con `x-device-id` y `x-device-key`.
+
+## Desarrollo
 ```bash
-npm install
-npm run dev
-```
-
-El frontend funciona en modo demostración si `/api` no está disponible. Para iniciar Functions localmente desde la raíz instala también las dependencias de `api` (`npm install --prefix api`) y usa `npm run api:start`. Vite entrega el frontend en `http://localhost:5173`; para desarrollo con Functions usa SWA CLI o un proxy local dirigido a `http://localhost:7071`.
-
-## NASA POWER y límites de las fuentes
-
-`GET /api/nasa-telemetry` consulta NASA POWER Daily AG para las coordenadas del centroide: T2M, PRECTOTCORR, ALLSKY_SFC_SW_DWN, WS2M, RH2M, PS y EVPTRNS. La interfaz queda sin datos si NASA no responde. NASA POWER es histórico/modelado; no es pronóstico. `PS` no genera alerta de cambio de presión. La elevación solo se muestra si NASA POWER la devuelve en su respuesta. La capa GIBS se sirve desde NASA y su resolución/fecha dependen del producto. No se promete NDVI parcelario ni SMAP mediante POWER.
-
-Las Functions HTTP usan `authLevel: anonymous` para el proxy integrado. El POST IoT requiere `IOT_WRITE_KEY` y encabezado `x-iot-key`. El backend actual mantiene lecturas en memoria, no persistentes y no escalables: para una instalación real de ESP32, se requiere almacenamiento Azure durable y gestión individual de identidad/credenciales de cada dispositivo. No incrustes secretos de sensores en JavaScript público.
-
-Las parcelas están guardadas en `localStorage` de ese navegador únicamente. No se sincronizan a otros dispositivos ni cuentas; eliminar una parcela borra su registro local.
-
-## Azure Static Web Apps
-
-El flujo de GitHub Actions requiere crear el secreto `AZURE_STATIC_WEB_APPS_API_TOKEN` en el repositorio. Conserva un `package-lock.json` generado por `npm install` en el primer commit de despliegue.
-
-```bash
-az login
-az group create --name rg-agroshift-mx --location centralus
-az staticwebapp create --name agroshift-michoacan --resource-group rg-agroshift-mx --location centralus --source https://github.com/ORGANIZACION/REPOSITORIO --branch main --app-location "/" --api-location "api" --output-location "dist" --login-with-github
-```
-
-Si `--login-with-github` no está disponible en la versión de Azure CLI instalada, crea el recurso desde Azure Portal o instala/actualiza la extensión de Static Web Apps y configura el workflow; agrega después el token de despliegue en GitHub Actions como `AZURE_STATIC_WEB_APPS_API_TOKEN`. Reemplaza organización/repositorio por el URL real.
-
-## Android / Capacitor
-
-Tras preparar un toolchain Android (Android Studio/JDK/SDK):
-
-```bash
-npm install
+npm install && npm install --prefix api
+npm test            # motor agronómico, geometría, API (cuentas, parcelas, dispositivos, ingesta, NASA)
 npm run build
-npx cap add android
-npx cap sync android
-npx cap open android
+node test/e2e/mock-server.mjs dist 4173   # servidor local de pruebas con almacenamiento en memoria
 ```
+Despliegue: GitHub Actions → Azure Static Web Apps (`app_location: /`, `api_location: api`, `output_location: dist`).
 
-La configuración PWA y Capacitor permite iniciar la empaquetación; la firma de un APK de producción requiere configurar un keystore y las credenciales de firma fuera del repositorio.
-
-## Persistencia y seguridad antes de producción
-
-El endpoint IoT incluido usa almacenamiento en memoria para que la muestra funcione sin recursos Azure adicionales; no persiste entre reinicios ni instancias. Para producción, sustituirlo por Azure Table Storage/Cosmos DB, autenticar los endpoints (Entra ID o tokens de dispositivo), validar límites/cuotas y configurar alertas/observabilidad. Añadir en Static Web Apps solo los orígenes CORS concretos si se sirve el API fuera del proxy integrado; no se necesita CORS para frontend y API bajo el mismo origen.
+## Android
+```bash
+npm run build && npx cap add android && npx cap sync android && npx cap open android
+```

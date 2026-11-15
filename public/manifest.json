@@ -1,0 +1,13 @@
+{
+  "name": "AGROTOPURE",
+  "short_name": "AGROTOPURE",
+  "description": "Fusión de datos NASA + sensores de suelo para rotación de cultivos y salud del suelo.",
+  "lang": "es-MX",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f3f6f4",
+  "theme_color": "#0d4a2b",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}

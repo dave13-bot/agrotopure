@@ -1,7 +1,7 @@
 {
-  "appId": "mx.agrosmart.agroshift",
-  "appName": "AgroSmart MX",
+  "appId": "mx.agrotopure.app",
+  "appName": "AGROTOPURE",
   "webDir": "dist",
   "server": { "androidScheme": "https", "cleartext": false },
-  "plugins": { "SplashScreen": { "launchShowDuration": 1500, "backgroundColor": "#0f3b21" } }
+  "plugins": { "SplashScreen": { "launchShowDuration": 1500, "backgroundColor": "#0d4a2b" } }
 }

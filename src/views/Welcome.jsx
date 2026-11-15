@@ -16,7 +16,7 @@ export default function Welcome({ session, onGuest }) {
         <section className="brand-gradient rounded-3xl p-6 text-white shadow-card sm:p-8 lg:col-span-5">
           <p className="text-xs font-bold uppercase tracking-widest text-emerald-200">NASA Space Apps 2026 · Field Shift</p>
           <h1 className="mt-2 text-3xl font-extrabold leading-tight">Decide tu siembra con el satélite y con tu suelo.</h1>
-          <p className="mt-3 text-sm leading-relaxed text-emerald-50">AGROTOPURE cruza datos de la NASA (POWER, SMAP, MODIS, ECOSTRESS, SRTM) con sensores enterrados en tu parcela para encontrar ventanas de siembra ocultas, reducir riego y planear la rotación de cultivos.</p>
+          <p className="mt-3 text-sm leading-relaxed text-emerald-50">AGROTOPURE cruza datos de la NASA (POWER, SMAP, MODIS, HLS y SRTM) con sensores enterrados en tu parcela para encontrar ventanas de siembra ocultas, reducir riego y planear la rotación de cultivos.</p>
           <div className="mt-6 space-y-3">
             <a href={loginUrl('github')} aria-disabled={!canLogin} className={`flex w-full items-center justify-center gap-3 rounded-2xl bg-white py-3.5 text-sm font-extrabold text-emerald-950 shadow-md hover:bg-emerald-50 ${canLogin ? '' : 'pointer-events-none opacity-60'}`}><GitHubIcon />Entrar con GitHub</a>
             <a href={loginUrl('aad')} aria-disabled={!canLogin} className={`flex w-full items-center justify-center gap-3 rounded-2xl bg-white py-3.5 text-sm font-extrabold text-emerald-950 shadow-md hover:bg-emerald-50 ${canLogin ? '' : 'pointer-events-none opacity-60'}`}><MicrosoftIcon />Entrar con Microsoft</a>

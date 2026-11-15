@@ -17,7 +17,8 @@ AGROTOPURE es una plataforma web y móvil de inteligencia agrícola desarrollada
 ## Fuentes de datos (solo NASA)
 - **NASA POWER** (LaRC) Daily y Climatology, comunidad AG: T2M, extremos, rocío, HR, lluvia, radiación, viento, presión, temperatura de superficie y humedad de suelo GWETTOP/GWETROOT/GWETPROF.
 - **ORNL DAAC (NASA)** MODIS Land Product Subsets: NDVI MOD13Q1 (250 m) y temperatura de superficie MOD11A2 (1 km).
-- **NASA GIBS** (capas de mapa): HLS 30 m, NDVI MODIS, SMAP L4 humedad superficial y radicular, temperatura MODIS, ECOSTRESS y relieve.
+- **NASA GIBS** (capas de mapa): HLS 30 m, NDVI MODIS, SMAP L4 humedad superficial y radicular, temperatura MODIS y elevación SRTM / ASTER.
+- **ECOSTRESS** no está publicado en GIBS ni tiene API abierta (requiere cuenta Earthdata/AppEEARS); queda como integración futura.
 
 Los mapas base (Esri, OpenStreetMap) solo sirven como referencia visual para dibujar la parcela.
 

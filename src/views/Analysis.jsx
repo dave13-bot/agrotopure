@@ -197,7 +197,7 @@ function CalendarSection({ months, loading, error, period }) {
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
         <div className="rounded-2xl bg-slate-50 p-4 text-sm">
           <p className="font-extrabold">{MONTHS[sel]} · riesgo {['bajo', 'medio', 'alto'][m.level]}</p>
-          <p className="mt-1 text-xs text-slate-600">Lluvia normal {months[sel].precip ?? '--'} mm · ETo {months[sel].eto ?? '--'} mm · balance {months[sel].balance ?? '--'} mm · T {fmt(months[sel].tmin) ?? '--'}–{fmt(months[sel].tmax) ?? '--'} °C</p>
+          <p className="mt-1 text-xs text-slate-600">Lluvia normal {months[sel].precip ?? '--'} mm · ETo {months[sel].eto ?? '--'} mm · balance {months[sel].balance ?? '--'} mm · extremos {fmt(months[sel].tmin) ?? '--'} a {fmt(months[sel].tmax) ?? '--'} °C</p>
           {m.risks.length ? <ul className="mt-2 list-disc space-y-1 pl-4 text-xs">{m.risks.map((r) => <li key={r.id}>{r.text}</li>)}</ul> : <p className="mt-2 text-xs text-emerald-800">Sin riesgos climáticos relevantes.</p>}
           {m.advice.length > 0 && <p className="mt-2 text-xs font-bold text-emerald-800">{m.advice.join(' ')}</p>}
         </div>

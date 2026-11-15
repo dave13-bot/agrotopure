@@ -134,7 +134,7 @@ export default function App() {
           {route.view === 'cuenta' && <Account {...ctx} onLogout={() => { if (session.principal) window.location.href = logoutUrl(); else exitGuest(); }} />}
         </Suspense>
         <footer className="mt-10 border-t border-slate-200 pt-4 text-center text-[11px] text-slate-500">
-          <Satellite size={12} className="mr-1 inline" />AGROTOPURE · NASA Space Apps 2026 · Reto Field Shift · Datos: NASA POWER, SMAP, MODIS (ORNL DAAC), ECOSTRESS, SRTM (GIBS)
+          <Satellite size={12} className="mr-1 inline" />AGROTOPURE · NASA Space Apps 2026 · Reto Field Shift · Datos: NASA POWER, MODIS (ORNL DAAC), SMAP, HLS y SRTM (GIBS)
         </footer>
       </main>
 

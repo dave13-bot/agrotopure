@@ -72,9 +72,11 @@ export function eto(day, latDeg, elevationM = 0) {
 
 /** ETo mensual por Hargreaves-Samani (mm/mes) para climatología. */
 export function etoHargreavesMonth(m, latDeg) {
-  if ([m.t2m, m.tmax, m.tmin].some((v) => v === null || v === undefined)) return null;
+  // En la climatología de POWER, T2M_MAX/T2M_MIN son extremos del mes; Hargreaves usa el rango diario medio (T2M_RANGE).
+  const range = m.range ?? (m.tmax !== null && m.tmin !== null ? m.tmax - m.tmin : null);
+  if (m.t2m === null || m.t2m === undefined || range === null || range === undefined) return null;
   const ra = extraterrestrialRadiation(latDeg, MID_DOY[m.month - 1]);
-  const d = 0.0023 * (m.t2m + 17.8) * Math.sqrt(Math.max(0, m.tmax - m.tmin)) * 0.408 * ra;
+  const d = 0.0023 * (m.t2m + 17.8) * Math.sqrt(Math.max(0, range)) * 0.408 * ra;
   return d * DAYS_IN_MONTH[m.month - 1];
 }
 
@@ -94,7 +96,7 @@ export function enrichDaily(power, latDeg) {
       if (daily[i][k] !== null && daily[i][k] !== undefined) { latest[k] = { value: daily[i][k], date: daily[i].date }; break; }
     }
   }
-  const last7 = daily.slice(-10).map((d) => d.eto).filter((v) => v !== null);
+  const last7 = daily.map((d) => d.eto).filter((v) => v !== null).slice(-7); // la radiación de POWER se publica con retraso
   const precip30 = daily.slice(-30).map((d) => d.precip).filter((v) => v !== null);
   return { daily, latest, etoAvg7: round(mean(last7), 2), precip30: round(precip30.reduce((s, x) => s + x, 0), 1) };
 }
@@ -118,10 +120,10 @@ export function vulnerabilityCalendar(months) {
     else if (deficit !== null && deficit > 40) risks.push({ id: 'sequia', level: 1, text: `Déficit hídrico (${deficit} mm)` });
     if (m.precip !== null && m.precip > 280) risks.push({ id: 'erosion', level: 2, text: `Lluvia intensa (${m.precip} mm): erosión y anegamiento` });
     else if (m.precip !== null && m.precip > 150) risks.push({ id: 'erosion', level: 1, text: `Lluvia alta (${m.precip} mm): proteger suelo desnudo` });
-    if (m.tmin !== null && m.tmin < 2) risks.push({ id: 'helada', level: 2, text: `Riesgo de helada (mín. media ${round(m.tmin)} °C)` });
-    else if (m.tmin !== null && m.tmin < 6) risks.push({ id: 'helada', level: 1, text: `Noches frías (mín. media ${round(m.tmin)} °C)` });
-    if (m.tmax !== null && m.tmax > 34) risks.push({ id: 'calor', level: 2, text: `Calor extremo (máx. media ${round(m.tmax)} °C)` });
-    else if (m.tmax !== null && m.tmax > 31) risks.push({ id: 'calor', level: 1, text: `Calor (máx. media ${round(m.tmax)} °C)` });
+    if (m.tmin !== null && m.tmin < 0) risks.push({ id: 'helada', level: 2, text: `Riesgo de helada (mínima extrema ${round(m.tmin)} °C)` });
+    else if (m.tmin !== null && m.tmin < 3) risks.push({ id: 'helada', level: 1, text: `Posibles heladas ligeras (mínima extrema ${round(m.tmin)} °C)` });
+    if (m.tmax !== null && m.tmax > 38) risks.push({ id: 'calor', level: 2, text: `Calor extremo (máxima extrema ${round(m.tmax)} °C)` });
+    else if (m.tmax !== null && m.tmax > 35) risks.push({ id: 'calor', level: 1, text: `Golpes de calor (máxima extrema ${round(m.tmax)} °C)` });
     const level = risks.reduce((a, r) => Math.max(a, r.level), 0);
     const advice = [];
     if (risks.some((r) => r.id === 'erosion')) advice.push('Mantener cobertura vegetal o residuos; evitar labranza.');
@@ -138,7 +140,7 @@ const monthOk = (plant, m) => {
   const [a, b] = plant.temp;
   const tol = plant.perennial ? 3 : 0;
   if (m.t2m < a - tol || m.t2m > b + tol) return false;
-  if (plant.frostSensitive && m.tmin !== null && m.tmin < 2) return false;
+  if (plant.frostSensitive && m.tmin !== null && m.tmin < 0) return false; // mínima extrema del mes bajo cero
   return true;
 };
 

@@ -8,7 +8,7 @@ const ORNL = 'https://modis.ornl.gov/rst/api/v1';
 
 const DAILY_PARAMS = ['T2M', 'T2M_MAX', 'T2M_MIN', 'T2MDEW', 'RH2M', 'PRECTOTCORR', 'ALLSKY_SFC_SW_DWN', 'WS2M', 'PS', 'TS', 'GWETTOP', 'GWETROOT', 'GWETPROF'];
 const DAILY_MIN = ['T2M', 'T2M_MAX', 'T2M_MIN', 'RH2M', 'PRECTOTCORR', 'ALLSKY_SFC_SW_DWN', 'WS2M'];
-const CLIM_PARAMS = ['T2M', 'T2M_MAX', 'T2M_MIN', 'RH2M', 'PRECTOTCORR', 'ALLSKY_SFC_SW_DWN', 'WS2M', 'GWETTOP', 'GWETROOT'];
+const CLIM_PARAMS = ['T2M', 'T2M_MAX', 'T2M_MIN', 'T2M_RANGE', 'RH2M', 'PRECTOTCORR', 'ALLSKY_SFC_SW_DWN', 'WS2M', 'GWETTOP', 'GWETROOT'];
 const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
 
 const cache = new Map();
@@ -96,12 +96,16 @@ export async function powerDaily(lat, lon, days = 60) {
 export async function powerClimatology(lat, lon) {
   return cached(`pc:${lat}:${lon}`, 24 * 3600e3, async () => {
     const url = `${POWER}/climatology/point?parameters=${CLIM_PARAMS.join(',')}&community=AG&longitude=${lon}&latitude=${lat}&format=JSON`;
-    const body = await getJson(url);
+    let body;
+    try { body = await getJson(url); } catch (e) {
+      if (e.upstreamStatus !== 422) throw e;
+      body = await getJson(url.replace('T2M_RANGE,', ''));
+    }
     const fill = body?.header?.fill_value ?? -999;
     const p = body?.properties?.parameter || {};
     const v = (k, m) => { const x = p[k]?.[m]; return x === undefined || x === fill || x <= -990 ? null : x; };
     const months = MONTHS.map((m, i) => ({
-      month: i + 1, t2m: v('T2M', m), tmax: v('T2M_MAX', m), tmin: v('T2M_MIN', m), rh: v('RH2M', m),
+      month: i + 1, t2m: v('T2M', m), tmax: v('T2M_MAX', m), tmin: v('T2M_MIN', m), range: v('T2M_RANGE', m), rh: v('RH2M', m),
       precipDay: v('PRECTOTCORR', m), rad: v('ALLSKY_SFC_SW_DWN', m), wind: v('WS2M', m),
       gwettop: v('GWETTOP', m), gwetroot: v('GWETROOT', m)
     }));

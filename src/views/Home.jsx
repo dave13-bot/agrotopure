@@ -124,7 +124,7 @@ export default function Home({ profile, parcels, devices, selected, setSelectedI
 
         <div className="grid gap-4 sm:grid-cols-3">
           <Source title="🛰️ NASA POWER" text="Clima diario, radiación, humedad de suelo modelada (GWET) y climatología de largo plazo." />
-          <Source title="🌱 MODIS · SMAP · ECOSTRESS" text="NDVI y temperatura de superficie (ORNL DAAC) y capas de humedad y calor en el mapa (GIBS)." />
+          <Source title="🌱 MODIS · SMAP · HLS" text="NDVI y temperatura de superficie (ORNL DAAC) y capas de humedad y calor en el mapa (GIBS)." />
           <Source title="📡 Sensores de piso" text="ESP32 o Raspberry Pi: humedad a 25 cm, temperatura radicular, pH y CE." />
         </div>
         {repo.mode === 'local' && parcels.length > 0 && <Notice tone="info">Los datos de esta sesión viven en este navegador.</Notice>}

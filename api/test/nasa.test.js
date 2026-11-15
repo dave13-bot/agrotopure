@@ -1,6 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { powerDaily, powerClimatology, modis } from '../src/lib/nasa.js';
+import { powerDaily, powerClimatology, modis, modisDate } from '../src/lib/nasa.js';
+
+test('fecha MODIS', () => { assert.equal(modisDate(new Date(Date.UTC(2026, 10, 1))), 'A2026305'); });
 
 const respond = (body, status = 200) => ({ ok: status < 400, status, text: async () => JSON.stringify(body) });
 
@@ -44,7 +46,7 @@ test('POWER climatología: 12 meses', async (t) => {
 
 test('MODIS ORNL: escala NDVI y LST', async (t) => {
   t.mock.method(globalThis, 'fetch', async (url) => {
-    if (url.includes('/dates')) return respond({ dates: [{ modis_date: 'A2026289', calendar_date: '2026-10-16' }, { modis_date: 'A2026305', calendar_date: '2026-11-01' }] });
+    assert.match(url, /startDate=A\d{7}&endDate=A\d{7}/);
     if (url.includes('MOD13Q1')) return respond({ subset: [{ calendar_date: '2026-10-16', data: [6512] }, { calendar_date: '2026-11-01', data: [-3000] }] });
     return respond({ subset: [{ calendar_date: '2026-11-01', data: [15000] }] });
   });

@@ -117,12 +117,19 @@ export async function powerClimatology(lat, lon) {
   });
 }
 
-async function ornlSeries(lat, lon, product, band, scale, offset, fill, take) {
-  const dates = await getJson(`${ORNL}/${product}/dates?latitude=${lat}&longitude=${lon}`);
-  const list = (dates?.dates || []).slice(-take);
-  if (!list.length) return [];
-  const url = `${ORNL}/${product}/subset?latitude=${lat}&longitude=${lon}&band=${band}&startDate=${list[0].modis_date}&endDate=${list[list.length - 1].modis_date}&kmAboveBelow=0&kmLeftRight=0`;
-  const body = await getJson(url, 40000);
+/** Fecha MODIS "AYYYYDDD". */
+export function modisDate(d) {
+  const start = Date.UTC(d.getUTCFullYear(), 0, 1);
+  const doy = Math.floor((d.getTime() - start) / 864e5) + 1;
+  return `A${d.getUTCFullYear()}${String(doy).padStart(3, '0')}`;
+}
+
+/** Serie del píxel que contiene el punto; una sola consulta por producto (sin listar todas las fechas). */
+async function ornlSeries(lat, lon, product, band, scale, offset, fill, spanDays) {
+  const end = new Date();
+  const start = new Date(end.getTime() - spanDays * 864e5);
+  const url = `${ORNL}/${product}/subset?latitude=${lat}&longitude=${lon}&band=${band}&startDate=${modisDate(start)}&endDate=${modisDate(end)}&kmAboveBelow=0&kmLeftRight=0`;
+  const body = await getJson(url, 38000);
   return (body?.subset || [])
     .map((s) => {
       const raw = Array.isArray(s.data) ? s.data[0] : null;
@@ -136,8 +143,8 @@ async function ornlSeries(lat, lon, product, band, scale, offset, fill, take) {
 export async function modis(lat, lon) {
   return cached(`md:${lat}:${lon}`, 12 * 3600e3, async () => {
     const [ndvi, lst] = await Promise.allSettled([
-      ornlSeries(lat, lon, 'MOD13Q1', '250m_16_days_NDVI', 0.0001, 0, -3000, 10),
-      ornlSeries(lat, lon, 'MOD11A2', 'LST_Day_1km', 0.02, -273.15, 0, 10)
+      ornlSeries(lat, lon, 'MOD13Q1', '250m_16_days_NDVI', 0.0001, 0, -3000, 140),
+      ornlSeries(lat, lon, 'MOD11A2', 'LST_Day_1km', 0.02, -273.15, 0, 72)
     ]);
     if (ndvi.status === 'rejected' && lst.status === 'rejected') throw ndvi.reason;
     return {

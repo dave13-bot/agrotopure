@@ -39,7 +39,7 @@ export function Logo({ light }) {
 
 export default function App() {
   const [session, setSession] = useState(null);
-  const [guest, setGuest] = useState(() => { try { return localStorage.getItem('agrotopure:guest') === '1'; } catch { return false; } });
+  const [guest, setGuest] = useState(() => { try { return localStorage.getItem('agrotopure:mode') === 'guest'; } catch { return false; } });
   const [profile, setProfile] = useState(undefined);
   const [parcels, setParcels] = useState([]);
   const [devices, setDevices] = useState([]);
@@ -86,13 +86,13 @@ export default function App() {
   const go = useCallback((view, arg) => { window.location.hash = `/${view}${arg ? `/${arg}` : ''}`; }, []);
 
   if (!session) return <div className="flex min-h-screen items-center justify-center"><Spinner label="Cargando AGROTOPURE…" /></div>;
-  if (!repo) return <Welcome session={session} onGuest={() => { try { localStorage.setItem('agrotopure:guest', '1'); } catch { /* */ } setGuest(true); }} />;
+  if (!repo) return <Welcome session={session} onGuest={() => { try { localStorage.setItem('agrotopure:mode', 'guest'); } catch { /* */ } setGuest(true); }} />;
   if (profile === undefined) return <div className="flex min-h-screen items-center justify-center"><Spinner label="Abriendo tu cuenta…" /></div>;
   if (profile === null) return <Onboarding repo={repo} session={session} error={error} onDone={(p) => { setProfile(p); go('parcelas'); }} />;
 
   const selected = parcels.find((p) => p.id === selectedId) || null;
   const ctx = { repo, session, profile, setProfile, parcels, devices, selected, selectedId, setSelectedId, refresh, go, guest };
-  const exitGuest = () => { try { localStorage.removeItem('agrotopure:guest'); } catch { /* */ } setGuest(false); };
+  const exitGuest = () => { try { localStorage.removeItem('agrotopure:mode'); } catch { /* */ } setGuest(false); };
   const initials = profile.name.split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase();
 
   return (

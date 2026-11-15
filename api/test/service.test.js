@@ -1,0 +1,74 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { MemoryStore } from '../src/lib/storage.js';
+import * as svc from '../src/lib/service.js';
+
+const alice = { userId: 'u-alice', provider: 'github', userDetails: 'alice' };
+const bob = { userId: 'u-bob', provider: 'aad', userDetails: 'bob@x.com' };
+const square = [
+  { lat: 19.42, lon: -102.065 }, { lat: 19.42, lon: -102.064 },
+  { lat: 19.419, lon: -102.064 }, { lat: 19.419, lon: -102.065 }
+];
+
+test('perfil: crear, leer y validar', async () => {
+  const s = new MemoryStore();
+  assert.equal(await svc.getProfile(s, alice), null);
+  await assert.rejects(svc.saveProfile(s, alice, { name: '' }), /nombre/);
+  const p = await svc.saveProfile(s, alice, { name: 'Alicia', region: 'Uruapan', priorities: ['agua', 'xx', 'agua'] });
+  assert.deepEqual(p.priorities, ['agua']);
+  assert.equal((await svc.getProfile(s, alice)).name, 'Alicia');
+});
+
+test('parcelas: área, centroide, aislamiento entre cuentas', async () => {
+  const s = new MemoryStore();
+  const p = await svc.saveParcel(s, alice, { name: 'Norte', crop: 'Maíz', coordinates: square });
+  assert.ok(p.areaHa > 1.1 && p.areaHa < 1.25, `área ${p.areaHa}`); // ~111 m x 105 m
+  assert.ok(Math.abs(p.centroid.lat - 19.4195) < 1e-6);
+  assert.equal((await svc.listParcels(s, alice)).length, 1);
+  assert.equal((await svc.listParcels(s, bob)).length, 0);
+  await assert.rejects(svc.saveParcel(s, bob, { name: 'x', coordinates: square }, p.id), /no encontrada/);
+  const bow = [square[0], square[2], square[1], square[3]];
+  await assert.rejects(svc.saveParcel(s, alice, { name: 'Moño', coordinates: bow }), /se cruzan/);
+  await assert.rejects(svc.saveParcel(s, alice, { name: 'x', coordinates: square.slice(0, 2) }), /3 y 200/);
+});
+
+test('dispositivo: llave, ingesta, lecturas y rotación', async () => {
+  const s = new MemoryStore();
+  const p = await svc.saveParcel(s, alice, { name: 'Norte', coordinates: square });
+  await assert.rejects(svc.createDevice(s, bob, { parcelId: p.id }), /no encontrada/);
+  const d = await svc.createDevice(s, alice, { parcelId: p.id, kind: 'esp32', name: 'Sonda 1' });
+  assert.equal(d.key.length, 48);
+  await assert.rejects(svc.ingest(s, d.id, 'mala', { moisture25: 30 }), /inválidos/);
+  const r = await svc.ingest(s, d.id, d.key, { readings: [
+    { moisture25: 31.5, rootTempC: 21.2, ph: 6.3, ts: Date.now() - 3600e3 },
+    { moisture25: 30.9, rootTempC: 21.8, ph: 6.3 }
+  ] });
+  assert.equal(r.stored, 2);
+  await assert.rejects(svc.ingest(s, d.id, d.key, { ph: 20 }), /fuera de rango/);
+  await assert.rejects(svc.ingest(s, d.id, d.key, {}), /ningún valor/);
+  const list = await svc.listReadings(s, alice, p.id, 7);
+  assert.equal(list.length, 2);
+  assert.ok(list[0].ts < list[1].ts, 'orden cronológico');
+  assert.equal(list[0].source, d.id);
+  await assert.rejects(svc.listReadings(s, bob, p.id, 7), /no encontrada/);
+  const rotated = await svc.rotateDeviceKey(s, alice, d.id);
+  await assert.rejects(svc.ingest(s, d.id, d.key, { moisture25: 30 }), /inválidos/);
+  assert.equal((await svc.ingest(s, d.id, rotated.key, { moisture25: 30 })).stored, 1);
+  assert.ok((await svc.listDevices(s, alice))[0].lastSeen);
+});
+
+test('lecturas manuales y borrado de cuenta', async () => {
+  const s = new MemoryStore();
+  const p = await svc.saveParcel(s, alice, { name: 'Sur', coordinates: square });
+  const m = await svc.addManualReading(s, alice, { parcelId: p.id, ph: 5.8, organicMatter: 3.1, texture: 'franco', notes: 'Análisis laboratorio' });
+  assert.equal(m.source, 'manual');
+  assert.equal((await svc.listReadings(s, alice, p.id, 30)).length, 1);
+  await svc.deleteReading(s, alice, p.id, m.ts);
+  assert.equal((await svc.listReadings(s, alice, p.id, 30)).length, 0);
+  await svc.createDevice(s, alice, { parcelId: p.id });
+  await svc.saveProfile(s, alice, { name: 'A' });
+  await svc.deleteAccount(s, alice);
+  assert.equal((await svc.listParcels(s, alice)).length, 0);
+  assert.equal((await svc.listDevices(s, alice)).length, 0);
+  assert.equal(await svc.getProfile(s, alice), null);
+});

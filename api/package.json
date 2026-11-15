@@ -1,8 +1,17 @@
 {
-  "name": "agroshift-functions",
+  "name": "agrotopure-api",
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "main": "*/index.js",
-  "dependencies": { "@azure/functions": "^4.7.2" }
+  "main": "src/functions/*.js",
+  "dependencies": {
+    "@azure/data-tables": "^13.3.2",
+    "@azure/functions": "^4.17.1"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
 }

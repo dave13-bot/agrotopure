@@ -6,7 +6,7 @@ import { CATEGORIES, GUIDE_COUNT, PLANTS, categoryLabel, localizedPlants, locali
 import { compatibility, scoreColor } from '../lib/agro.js';
 import { useParcelData } from '../lib/useParcelData.js';
 
-export default function Plants({ repo, selected, fine }) {
+export default function Plants({ repo, selected, fine, parcels = [], setSelectedId }) {
   const { t, locale } = useI18n();
   const [q, setQ] = useState('');
   const [cat, setCat] = useState('');
@@ -27,7 +27,19 @@ export default function Plants({ repo, selected, fine }) {
       <Card className="p-6">
         <SectionTitle eyebrow={t('plants.eyebrow')} title={t('plants.title', { n: PLANTS.length })}
           text={t('plants.lead', { guide: GUIDE_COUNT, added: PLANTS.length - GUIDE_COUNT })}
-          action={selected && <button className={evaluate ? 'btn-soft' : 'btn-primary'} onClick={() => setEvaluate((v) => !v)}><Sprout size={15} />{evaluate ? t('plants.evaluateOff') : t('plants.evaluate', { parcel: selected.name })}</button>} />
+          action={selected && (
+            <div className="flex flex-wrap items-center gap-2">
+              {parcels.length > 1 && setSelectedId && (
+                <>
+                  <label className="sr-only" htmlFor="plants-parcel">{t('plants.pickParcel')}</label>
+                  <select id="plants-parcel" className="input mt-0 w-auto min-w-[160px] max-w-[220px]" value={selected.id} onChange={(e) => setSelectedId(e.target.value)} title={t('plants.pickParcel')}>
+                    {parcels.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  </select>
+                </>
+              )}
+              <button className={evaluate ? 'btn-soft' : 'btn-primary'} onClick={() => setEvaluate((v) => !v)}><Sprout size={15} />{evaluate ? t('plants.evaluateOff') : t('plants.evaluate', { parcel: selected.name })}</button>
+            </div>
+          )} />
         <div className="mt-5 grid gap-3 md:grid-cols-[1fr_auto_auto]">
           <label className="relative"><span className="sr-only">{t('common.search')}</span><Search size={16} className="absolute left-3 top-1/2 mt-0.5 -translate-y-1/2 text-slate-400" /><input className="input pl-9" value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('plants.searchPh')} /></label>
           <select className="input" value={cat} onChange={(e) => setCat(e.target.value)} aria-label={t('plants.allCategories')}>

@@ -111,3 +111,14 @@ test('la alerta de salud del cultivo llega activada a perfiles anteriores', asyn
   assert.deepEqual(saved.alertTypes, ['frost']);
   assert.deepEqual((await svc.getProfile(s, u)).alertTypes, ['frost']);
 });
+
+test('una parcela del tamaño de un continente se rechaza', async () => {
+  const s = new MemoryStore();
+  const u = { userId: 'u-big', provider: 'github', userDetails: 'x' };
+  const huge = [{ lat: 30, lon: -115 }, { lat: 30, lon: -90 }, { lat: 15, lon: -90 }, { lat: 15, lon: -115 }];
+  await assert.rejects(svc.saveParcel(s, u, { name: 'Continente', coordinates: huge }), /más de 5,000 ha/);
+  const big = [{ lat: 19.5, lon: -102.2 }, { lat: 19.5, lon: -102.1 }, { lat: 19.4, lon: -102.1 }, { lat: 19.4, lon: -102.2 }]; // ≈ 11,600 ha
+  await assert.rejects(svc.saveParcel(s, u, { name: 'Muy grande', coordinates: big }), /5,000 ha/);
+  const ok = [{ lat: 19.45, lon: -102.15 }, { lat: 19.45, lon: -102.1 }, { lat: 19.4, lon: -102.1 }, { lat: 19.4, lon: -102.15 }]; // ≈ 2,900 ha
+  assert.ok((await svc.saveParcel(s, u, { name: 'Rancho', coordinates: ok })).areaHa < 5000);
+});

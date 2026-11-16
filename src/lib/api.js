@@ -1,5 +1,5 @@
 // Capa de datos: nube (Azure Functions + Table Storage) o local (este navegador).
-import { polygonAreaM2, centroid, isSelfIntersecting } from './geo.js';
+import { polygonAreaM2, centroid, isSelfIntersecting, MAX_PARCEL_HA } from './geo.js';
 import { ALERT_TYPES } from './alerts.js';
 
 const LOCALES = ['es', 'en'];
@@ -114,6 +114,7 @@ export function localRepo(namespace) {
       if (isSelfIntersecting(pts)) throw new ApiError(400, 'Los lados del polígono se cruzan: revisa el orden de las esquinas.');
       const area = polygonAreaM2(pts);
       if (area < 10) throw new ApiError(400, 'El área de la parcela es demasiado pequeña.');
+      if (area > MAX_PARCEL_HA * 1e4) throw new ApiError(400, `La parcela mide más de ${MAX_PARCEL_HA.toLocaleString('es-MX')} ha. Divide el terreno en varias parcelas.`, 'too_big');
       const sowDate = /^\d{4}-\d{2}-\d{2}$/.test(p.sowDate || '') ? p.sowDate : '';
       const d = db(); const t = new Date().toISOString();
       const prev = id ? d.parcels.find((x) => x.id === id) : null;

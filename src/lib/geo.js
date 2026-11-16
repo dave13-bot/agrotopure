@@ -68,4 +68,8 @@ export function parseCoord(text, kind) {
   return v;
 }
 
+/** Tamaño máximo de una parcela (ha). Terrenos mayores se dividen en varias parcelas. */
+export const MAX_PARCEL_HA = 5000;
+export const MIN_PARCEL_M2 = 10;
+
 export const formatHa = (ha) => (ha >= 100 ? ha.toFixed(0) : ha >= 10 ? ha.toFixed(1) : ha.toFixed(2));

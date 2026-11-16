@@ -5,10 +5,13 @@ export const extraEs = {
   nav: { about: 'Acerca de nosotros', aboutShort: 'Nosotros' },
   parcels: {
     onWater: 'Esta parcela queda sobre el océano o un cuerpo de agua según la máscara tierra/agua de NASA GIBS. Mueve las esquinas a tierra firme para guardarla.',
+    tooBig: 'La parcela es demasiado grande: el máximo es {max} ha. Revisa las esquinas o divide el terreno en varias parcelas.',
+    tooSmall: 'La parcela es demasiado pequeña: revisa las esquinas.',
+    maxArea: 'Máximo {max} ha',
     sowDate: 'Fecha de siembra',
     sowDateHelp: 'Con la fecha, la salud del cultivo se compara contra la etapa en que debería estar.'
   },
-  layers: { landsat: 'Imagen Landsat 30 m (NASA)', streets: 'Calles (OpenStreetMap)' },
+  plants: { pickParcel: 'Parcela a evaluar' },
   alerts: {
     types: { health: 'Salud del cultivo' },
     health: {
@@ -109,22 +112,25 @@ export const extraEs = {
     closing: 'Hardware inteligente y telemetría satelital para una agricultura más resiliente y conectada, desde Michoacán para el mundo.',
     complianceTitle: 'Transparencia',
     license: 'Código abierto bajo licencia Apache 2.0.',
-    data: 'Datos: NASA POWER, MODIS (ORNL DAAC), EONET y GIBS (SMAP, HLS, Landsat, SRTM, máscara tierra/agua). Mapa de calles: © colaboradores de OpenStreetMap.',
+    data: 'Datos: NASA POWER, MODIS (ORNL DAAC), EONET y GIBS (SMAP, HLS, Landsat, SRTM, máscara tierra/agua). Mapas base de referencia: imagen satelital de Esri (Esri, Maxar, Earthstar Geographics) y calles © colaboradores de OpenStreetMap; no intervienen en ningún cálculo.',
     ai: 'Uso de IA: el código y los textos de la plataforma se desarrollaron con asistencia de Claude (Anthropic) y fueron revisados por el equipo. El emblema del equipo se generó con IA.',
     disclaimer: 'Proyecto de estudiantes para NASA Space Apps Challenge. No está afiliado a la NASA ni respaldado por ella.',
     repo: 'Código en GitHub'
   },
-  credit: { madeBy: 'Hecho por Tesla Legacy', place: 'Uruapan, Michoacán, México', license: 'Licencia Apache 2.0', notNasa: 'No afiliado a la NASA ni respaldado por ella.' }
+  credit: { madeBy: 'Hecho por Tesla Legacy', place: 'Uruapan, Michoacán, México', license: 'Licencia Apache 2.0' }
 };
 
 export const extraEn = {
   nav: { about: 'About us', aboutShort: 'About' },
   parcels: {
     onWater: 'This field sits on the ocean or a water body according to the NASA GIBS land/water mask. Move its corners onto dry land to save it.',
+    tooBig: 'The field is too large: the maximum is {max} ha. Check the corners or split the land into several fields.',
+    tooSmall: 'The field is too small: check the corners.',
+    maxArea: 'Maximum {max} ha',
     sowDate: 'Sowing date',
     sowDateHelp: 'With the date, crop health is compared against the stage the crop should be in.'
   },
-  layers: { landsat: 'Landsat 30 m imagery (NASA)', streets: 'Streets (OpenStreetMap)' },
+  plants: { pickParcel: 'Field to evaluate' },
   alerts: {
     types: { health: 'Crop health' },
     health: {
@@ -225,10 +231,10 @@ export const extraEn = {
     closing: 'Smart hardware and satellite telemetry for a more resilient, connected agriculture, from Michoacán to the world.',
     complianceTitle: 'Transparency',
     license: 'Open source under the Apache 2.0 license.',
-    data: 'Data: NASA POWER, MODIS (ORNL DAAC), EONET and GIBS (SMAP, HLS, Landsat, SRTM, land/water mask). Street map: © OpenStreetMap contributors.',
+    data: 'Data: NASA POWER, MODIS (ORNL DAAC), EONET and GIBS (SMAP, HLS, Landsat, SRTM, land/water mask). Reference basemaps: Esri satellite imagery (Esri, Maxar, Earthstar Geographics) and streets © OpenStreetMap contributors; they take no part in any calculation.',
     ai: 'AI use: the platform code and texts were developed with assistance from Claude (Anthropic) and reviewed by the team. The team emblem was generated with AI.',
     disclaimer: 'Student project for NASA Space Apps Challenge. Not affiliated with or endorsed by NASA.',
     repo: 'Code on GitHub'
   },
-  credit: { madeBy: 'Made by Tesla Legacy', place: 'Uruapan, Michoacán, Mexico', license: 'Apache 2.0 License', notNasa: 'Not affiliated with or endorsed by NASA.' }
+  credit: { madeBy: 'Made by Tesla Legacy', place: 'Uruapan, Michoacán, Mexico', license: 'Apache 2.0 License' }
 };

@@ -1,0 +1,13 @@
+AGRO-TOPURE
+Copyright 2026 Tesla Legacy (Efraín Paleo Jacobo, Antonio Contreras Mendoza, Deyvid Lucas Rivera,
+Carlos Salim López Correa, Cristina Morales López, Rafael González Bravo)
+
+Licensed under the Apache License, Version 2.0. See the LICENSE file.
+
+Built for the 2026 NASA Space Apps Challenge. This project is not affiliated with or endorsed by NASA.
+
+This product uses open data from NASA (POWER, MODIS via ORNL DAAC, EONET, GIBS/EOSDIS) and street map
+tiles (c) OpenStreetMap contributors (ODbL). Third-party software and its licenses are listed in README.md.
+
+Parts of the source code and texts were written with the assistance of an AI tool (Claude, by Anthropic)
+and reviewed by the team. The team emblem (public/team/tesla-legacy.png) is an AI-generated image.

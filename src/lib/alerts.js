@@ -1,10 +1,11 @@
 // Alertas de peligro para los cultivos, construidas SOLO con datos de la NASA.
 //  - Eventos activos observados: NASA EONET (ciclones, incendios, inundaciones, sequía, volcanes).
 //  - Condiciones de la parcela: NASA POWER diario comparado con su climatología de largo plazo.
+//  - Salud del cultivo: NDVI de MODIS (MOD13Q1) comparado con lo esperado para el cultivo y su etapa.
 // Nada de esto es un pronóstico: POWER publica con días de retraso y EONET es un repositorio de
 // metadatos para visualización y referencia general, no una fuente oficial de precisión espacial.
 
-export const ALERT_TYPES = ['storm', 'fire', 'flood', 'drought', 'volcano', 'frost', 'heat', 'uv', 'rain', 'wind', 'dry'];
+export const ALERT_TYPES = ['storm', 'fire', 'flood', 'drought', 'volcano', 'frost', 'heat', 'uv', 'rain', 'wind', 'dry', 'health'];
 
 const EONET_MAP = {
   severeStorms: 'storm', wildfires: 'fire', floods: 'flood', drought: 'drought',
@@ -151,8 +152,8 @@ export function powerAlerts(daily, months, crop) {
 }
 
 /** Lista final ordenada y filtrada por las preferencias del usuario. */
-export function buildAlerts({ eonet, daily, months, crop, enabled = ALERT_TYPES }) {
-  const all = [...eonetAlerts(eonet), ...powerAlerts(daily, months, crop)];
+export function buildAlerts({ eonet, daily, months, crop, enabled = ALERT_TYPES, health = null }) {
+  const all = [...eonetAlerts(eonet), ...powerAlerts(daily, months, crop), health].filter(Boolean);
   return all
     .filter((a) => enabled.includes(a.type))
     .sort((a, b) => b.severity - a.severity || (a.distanceKm ?? 1e9) - (b.distanceKm ?? 1e9) || String(b.date).localeCompare(String(a.date)));

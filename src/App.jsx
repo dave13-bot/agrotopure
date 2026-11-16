@@ -1,5 +1,6 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
-import { BookOpen, Cpu, House, LineChart, LogOut, Map as MapIcon, Satellite, UserRound } from 'lucide-react';
+import { lazy, Suspense, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { BookOpen, Cpu, House, LineChart, LogOut, Map as MapIcon, Satellite, UserRound, Users } from 'lucide-react';
+import { TEAM } from './data/team.js';
 import { cloudRepo, localRepo, loadSession, logoutUrl } from './lib/api.js';
 import { I18nContext, translate } from './lib/i18n.js';
 import { ALERT_TYPES } from './lib/alerts.js';
@@ -16,13 +17,15 @@ const Analysis = lazy(() => import('./views/Analysis.jsx'));
 const Sensors = lazy(() => import('./views/Sensors.jsx'));
 const Plants = lazy(() => import('./views/Plants.jsx'));
 const Account = lazy(() => import('./views/Account.jsx'));
+const About = lazy(() => import('./views/About.jsx'));
 
 const BASE_NAV = [
   { id: 'inicio', key: 'nav.home', icon: House },
   { id: 'parcelas', key: 'nav.parcels', icon: MapIcon },
   { id: 'analisis', key: 'nav.analysis', icon: LineChart },
   { id: 'sensores', key: 'nav.sensors', icon: Cpu, fine: true },
-  { id: 'plantas', key: 'nav.plants', icon: BookOpen }
+  { id: 'plantas', key: 'nav.plants', icon: BookOpen },
+  { id: 'nosotros', key: 'nav.about', shortKey: 'nav.aboutShort', icon: Users }
 ];
 
 const readRoute = () => {
@@ -37,9 +40,22 @@ export function Logo({ light, tagline }) {
     <span className="flex items-center gap-2.5">
       <img src="/icon.svg" alt="" className="h-10 w-10 rounded-xl shadow-sm" />
       <span>
-        <span className={`block text-lg font-extrabold leading-none tracking-tight ${light ? 'text-white' : 'text-emerald-950'}`}>AGROTO<span className={light ? 'text-emerald-200' : 'text-emerald-600'}>PURE</span></span>
+        <span className={`block text-lg font-extrabold leading-none tracking-tight ${light ? 'text-white' : 'text-emerald-950'}`}><span className={light ? 'text-emerald-200' : 'text-emerald-700'}>AGRO</span><span className="text-gold">-</span><span className={light ? 'text-gold' : 'text-navy'}>TOPURE</span></span>
         <span className={`block text-[11px] font-medium leading-tight ${light ? 'text-emerald-100' : 'text-slate-500'}`}>{tagline}</span>
       </span>
+    </span>
+  );
+}
+
+/** Crédito del equipo al pie de todas las pantallas. */
+export function TeamCredit({ onAbout }) {
+  const { locale } = useContext(I18nContext);
+  const t = (k) => translate(locale, k);
+  const body = <><img src={TEAM.logo} alt="" className="h-9 w-9 rounded-full bg-white object-cover object-top" /><span className="text-left leading-tight"><span className="block text-xs font-extrabold text-navy">{t('credit.madeBy')}</span><span className="block">{t('credit.place')}</span></span></>;
+  return (
+    <span className="mt-3 flex flex-col items-center gap-1.5">
+      {onAbout ? <button type="button" onClick={onAbout} className="flex items-center gap-2 rounded-full border border-slate-200 bg-white py-1 pl-1 pr-4 hover:border-gold">{body}</button> : <span className="flex items-center gap-2">{body}</span>}
+      <span>{t('credit.license')} · {t('credit.notNasa')}</span>
     </span>
   );
 }
@@ -101,7 +117,7 @@ export default function App() {
   const fine = profile?.fineAnalysis === true;
   const selected = parcels.find((p) => p.id === selectedId) || null;
   const alertTypes = profile?.alertTypes || ALERT_TYPES;
-  const watch = useParcelData(selected, repo || { listReadings: async () => [] }, { readings: false, eonet: true, alertTypes });
+  const watch = useParcelData(selected, repo || { listReadings: async () => [] }, { readings: false, eonet: true, modis: true, alertTypes });
 
   useEffect(() => { if (route.view === 'sensores' && profile && !fine) go('analisis'); }, [route.view, fine, profile, go]);
 
@@ -137,7 +153,7 @@ export default function App() {
             <nav className="hidden items-center gap-1 rounded-full bg-slate-100 p-1 text-xs font-semibold lg:flex" aria-label={t('nav.main')}>
               {nav.map((n) => (
                 <button key={n.id} onClick={() => go(n.id)} aria-current={route.view === n.id ? 'page' : undefined}
-                  className={`rounded-full px-3.5 py-1.5 transition ${route.view === n.id ? 'bg-emerald-800 text-white' : 'text-slate-600 hover:text-emerald-900'}`}>{t(n.key)}</button>
+                  className={`rounded-full px-3.5 py-1.5 transition ${route.view === n.id ? 'brand-gradient text-white' : 'text-slate-600 hover:text-emerald-900'}`}>{t(n.key)}</button>
               ))}
             </nav>
             <div className="flex items-center gap-2">
@@ -168,20 +184,22 @@ export default function App() {
             {route.view === 'analisis' && <Analysis {...ctx} />}
             {route.view === 'sensores' && fine && <Sensors {...ctx} />}
             {route.view === 'plantas' && <Plants {...ctx} arg={route.arg} />}
+            {route.view === 'nosotros' && <About />}
             {route.view === 'cuenta' && <Account {...ctx} onLogout={() => { if (session.principal) window.location.href = logoutUrl(); else exitGuest(); }} />}
           </Suspense>
           <footer className="mt-10 border-t border-slate-200 pt-4 text-center text-[11px] text-slate-500">
             <Satellite size={12} className="mr-1 inline" />{t('footer')}
+            <TeamCredit onAbout={() => go('nosotros')} />
             <span className="mt-2 flex justify-center sm:hidden"><LangSwitch /></span>
           </footer>
         </main>
 
         <nav className="fixed inset-x-0 bottom-0 z-[600] border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden" aria-label={t('nav.mobile')}>
-          <div className={`grid ${nav.length === 5 ? 'grid-cols-5' : 'grid-cols-4'}`}>
+          <div className={`grid ${nav.length === 6 ? 'grid-cols-6' : 'grid-cols-5'}`}>
             {nav.map((n) => (
               <button key={n.id} onClick={() => go(n.id)} aria-current={route.view === n.id ? 'page' : undefined}
                 className={`flex flex-col items-center gap-0.5 py-2 text-[10px] font-bold ${route.view === n.id ? 'text-emerald-800' : 'text-slate-500'}`}>
-                <n.icon size={20} strokeWidth={route.view === n.id ? 2.4 : 1.8} />{t(n.key)}
+                <n.icon size={20} strokeWidth={route.view === n.id ? 2.4 : 1.8} />{t(n.shortKey || n.key)}
               </button>
             ))}
           </div>

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { checkLand } from '../lib/api.js';
 import { ArrowLeft, ClipboardPaste, Pencil, Plus, RotateCcw, Shuffle, Trash2, Undo2 } from 'lucide-react';
 import ParcelMap from '../components/ParcelMap.jsx';
 import { Badge, Card, Empty, Modal, Notice, SectionTitle } from '../components/ui.jsx';
@@ -72,7 +73,7 @@ const blankCorner = () => ({ lat: '', lon: '' });
 
 function ParcelEditor({ repo, parcel, parcels, onDone }) {
   const { t, locale } = useI18n();
-  const [form, setForm] = useState({ name: parcel?.name || '', crop: parcel?.crop || '', soilTexture: parcel?.soilTexture || 'desconocido', notes: parcel?.notes || '' });
+  const [form, setForm] = useState({ name: parcel?.name || '', crop: parcel?.crop || '', soilTexture: parcel?.soilTexture || 'desconocido', sowDate: parcel?.sowDate || '', notes: parcel?.notes || '' });
   const [corners, setCorners] = useState(parcel ? parcel.coordinates.map((c) => ({ lat: String(c.lat), lon: String(c.lon) })) : []);
   const [mode, setMode] = useState(parcel ? 'coords' : 'draw');
   const [paste, setPaste] = useState(null);
@@ -98,7 +99,12 @@ function ParcelEditor({ repo, parcel, parcels, onDone }) {
     if (valid.length < 3) { setErr(t('parcels.min3')); return; }
     if (stats?.crossing) { setErr(t('parcels.crossing')); return; }
     setBusy(true);
-    try { onDone(await repo.saveParcel({ ...form, coordinates: valid }, parcel?.id)); } catch (ex) { setErr(ex.message); } finally { setBusy(false); }
+    try {
+      // Máscara tierra/agua de NASA GIBS: no se aceptan parcelas en el océano ni en cuerpos de agua.
+      const land = await checkLand(valid);
+      if (land.checked && !land.onLand) { setErr(t('parcels.onWater', { pct: Math.round((land.waterFraction || 0) * 100) })); return; }
+      onDone(await repo.saveParcel({ ...form, coordinates: valid }, parcel?.id));
+    } catch (ex) { setErr(ex.code === 'on_water' ? t('parcels.onWater', { pct: '' }) : ex.message); } finally { setBusy(false); }
   };
 
   const applyPaste = () => {
@@ -150,6 +156,7 @@ function ParcelEditor({ repo, parcel, parcels, onDone }) {
                 </select>
               </label>
             </div>
+            <label className="label">{t('parcels.sowDate')} <span className="font-normal normal-case text-slate-400">({t('common.optional')})</span><input type="date" className="input" value={form.sowDate} onChange={(e) => setForm({ ...form, sowDate: e.target.value })} /><span className="mt-1 block text-[11px] font-normal normal-case tracking-normal text-slate-500">{t('parcels.sowDateHelp')}</span></label>
             <label className="label">{t('common.notes')}<textarea className="input min-h-[70px] py-2" maxLength={500} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder={t('parcels.notesPh')} /></label>
           </Card>
 

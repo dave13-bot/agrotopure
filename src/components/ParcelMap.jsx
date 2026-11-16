@@ -21,7 +21,7 @@ export default function ParcelMap({ parcels = [], selectedId, onSelect, draft, o
   const baseLayers = useRef({});
   const draftRef = useRef(draft);
   const changeRef = useRef(onDraftChange);
-  const [base, setBase] = useState('esri');
+  const [base, setBase] = useState('landsat');
   const [overlays, setOverlays] = useState(initialOverlays);
   const [panel, setPanel] = useState(false);
   const [geoError, setGeoError] = useState('');
@@ -34,7 +34,11 @@ export default function ParcelMap({ parcels = [], selectedId, onSelect, draft, o
   useEffect(() => {
     const m = L.map(el.current, { center: MICHOACAN, zoom: 8, zoomControl: true, attributionControl: true });
     map.current = m;
-    for (const b of BASE_LAYERS) baseLayers.current[b.id] = L.tileLayer(b.url, { attribution: b.attribution, maxZoom: b.maxZoom });
+    for (const b of BASE_LAYERS) {
+      baseLayers.current[b.id] = b.wms
+        ? L.tileLayer.wms(GIBS_WMS, { layers: b.wms, format: 'image/jpeg', attribution: b.attribution, maxZoom: b.maxZoom })
+        : L.tileLayer(b.url, { attribution: b.attribution, maxZoom: b.maxZoom });
+    }
     for (const o of NASA_OVERLAYS) {
       overlayLayers.current[o.id] = L.tileLayer.wms(GIBS_WMS, { layers: o.layer, format: 'image/png', transparent: true, opacity: o.opacity, attribution: 'NASA GIBS / EOSDIS', maxZoom: 19 });
     }

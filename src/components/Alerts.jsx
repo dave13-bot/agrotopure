@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { Bell, CloudRain, Droplets, Flame, Mountain, ShieldCheck, Snowflake, Sun, Thermometer, TriangleAlert, Waves, Wind } from 'lucide-react';
+import { Bell, CloudRain, HeartPulse, Droplets, Flame, Mountain, ShieldCheck, Snowflake, Sun, Thermometer, TriangleAlert, Waves, Wind } from 'lucide-react';
 import { useI18n } from '../lib/i18n.js';
 import { ALERT_TYPES } from '../lib/alerts.js';
 import { Badge, Notice, Spinner, useFmt } from './ui.jsx';
 
 export const ALERT_ICON = {
   storm: Wind, fire: Flame, flood: Waves, drought: Droplets, volcano: Mountain,
-  frost: Snowflake, heat: Thermometer, uv: Sun, rain: CloudRain, wind: Wind, dry: Droplets
+  frost: Snowflake, heat: Thermometer, uv: Sun, rain: CloudRain, wind: Wind, dry: Droplets, health: HeartPulse
 };
 
 const TONE = {
@@ -30,7 +30,7 @@ export function AlertItem({ alert, compact }) {
             <Badge tone={tone.chip}>{t(tone.label)}</Badge>
             <Badge tone="slate">{alert.source}</Badge>
           </div>
-          <p className="mt-1 text-xs leading-relaxed">{t(alert.key, alert.vars)}</p>
+          <p className="mt-1 text-xs leading-relaxed">{t(alert.key, alert.vars)}{alert.extraKey ? ` ${t(alert.extraKey, alert.extraVars)}` : ''}</p>
           {!compact && (
             <p className="mt-1 text-[11px] opacity-80">
               {alert.date ? fmt.date(String(alert.date).slice(0, 10), { day: 'numeric', month: 'short', year: 'numeric' }) : ''}

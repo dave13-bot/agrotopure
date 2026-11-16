@@ -30,5 +30,7 @@
     "tailwindcss": "^3.4.16",
     "vite": "^6.0.5"
   },
-  "description": "Plataforma híbrida de decisión agrícola que fusiona telemetría satelital de la NASA con sensores IoT subterráneos (Δ) para optimizar la rotación de cultivos y la salud del suelo en Michoacán."
+  "description": "Plataforma híbrida de decisión agrícola que fusiona telemetría satelital de la NASA con sensores IoT subterráneos (Δ) para optimizar la rotación de cultivos y la salud del suelo en Michoacán.",
+  "license": "Apache-2.0",
+  "author": "Tesla Legacy"
 }

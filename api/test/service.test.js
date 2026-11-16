@@ -87,3 +87,27 @@ test('perfil: idioma, análisis fino y tipos de alerta', async () => {
   const r = await svc.saveProfile(s, alice, { name: 'Ana', locale: 'klingon' });
   assert.equal(r.locale, 'es');
 });
+
+test('las parcelas en el océano se rechazan y la fecha de siembra se guarda', async () => {
+  const s = new MemoryStore();
+  const sq = [{ lat: 19.42, lon: -102.07 }, { lat: 19.42, lon: -102.06 }, { lat: 19.41, lon: -102.06 }, { lat: 19.41, lon: -102.07 }];
+  const u = { userId: 'u-land', provider: 'github', userDetails: 'x' };
+  const water = async () => ({ checked: true, onLand: false, waterFraction: 1 });
+  const land = async () => ({ checked: true, onLand: true, waterFraction: 0 });
+  const down = async () => ({ checked: false, onLand: true });
+  await assert.rejects(svc.saveParcel(s, u, { name: 'Mar', coordinates: sq }, undefined, { landCheck: water }), /océano/);
+  const p = await svc.saveParcel(s, u, { name: 'Tierra', coordinates: sq, sowDate: '2026-06-10' }, undefined, { landCheck: land });
+  assert.equal(p.sowDate, '2026-06-10');
+  assert.ok((await svc.saveParcel(s, u, { name: 'Sin servicio', coordinates: sq }, undefined, { landCheck: down })).id);
+  await assert.rejects(svc.saveParcel(s, u, { name: 'x', coordinates: sq, sowDate: 'ayer' }), /fecha de siembra/);
+});
+
+test('la alerta de salud del cultivo llega activada a perfiles anteriores', async () => {
+  const s = new MemoryStore();
+  const u = { userId: 'u-old', provider: 'github', userDetails: 'x' };
+  await s.upsert('profiles', { partitionKey: 'profile', rowKey: 'u-old', name: 'Ana', region: '', priorities: '[]', alertTypes: '["frost","heat"]' });
+  assert.deepEqual((await svc.getProfile(s, u)).alertTypes, ['frost', 'heat', 'health']);
+  const saved = await svc.saveProfile(s, u, { name: 'Ana', alertTypes: ['frost'] });
+  assert.deepEqual(saved.alertTypes, ['frost']);
+  assert.deepEqual((await svc.getProfile(s, u)).alertTypes, ['frost']);
+});

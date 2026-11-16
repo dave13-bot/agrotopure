@@ -1,6 +1,6 @@
-# AGROTOPURE · Raspberry Pi
+# AGRO-TOPURE · Raspberry Pi
 
-Servicio que lee los sensores de suelo de forma automática y los envía a AGROTOPURE, con cola local si no hay internet.
+Servicio que lee los sensores de suelo de forma automática y los envía a AGRO-TOPURE, con cola local si no hay internet.
 
 ## Conexiones
 | Sensor | Variable | Conexión |
@@ -19,7 +19,7 @@ sudo raspi-config nonint do_i2c 0 && sudo raspi-config nonint do_onewire 0
 sudo apt install -y python3-pip
 sudo pip3 install --break-system-packages adafruit-circuitpython-ads1x15 adafruit-circuitpython-dht
 sudo mkdir -p /opt/agrotopure && sudo cp agrotopure_rpi.py /opt/agrotopure/
-sudo nano /etc/agrotopure.env      # pega la configuración que te da AGROTOPURE (Sensores → Dispositivo)
+sudo nano /etc/agrotopure.env      # pega la configuración que te da AGRO-TOPURE (Sensores → Dispositivo)
 sudo cp agrotopure.service /etc/systemd/system/
 sudo systemctl enable --now agrotopure
 journalctl -u agrotopure -f        # verás "POST 200" en cada envío

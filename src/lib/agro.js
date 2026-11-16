@@ -1,4 +1,4 @@
-// Motor agronómico de AGROTOPURE: fusión de datos (Δ) satélite NASA ↔ sensores de piso,
+// Motor agronómico de AGRO-TOPURE: fusión de datos (Δ) satélite NASA ↔ sensores de piso,
 // compatibilidad de cultivos, calendario de vulnerabilidad, estrategias de rotación y predicciones.
 // Todos los cálculos son deterministas y explicables; cada resultado incluye su método.
 import { PLANTS } from '../data/plants.js';
@@ -6,6 +6,7 @@ import { PLANTS } from '../data/plants.js';
 export const MONTHS = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 const DAYS_IN_MONTH = [31, 28.25, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 const MID_DOY = [15, 46, 74, 105, 135, 166, 196, 227, 258, 288, 319, 349];
+const MONTH_START_DOY = [1, 32, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335];
 
 // Propiedades hidráulicas típicas por textura (humedad volumétrica, %). Valores de referencia
 // generales; se recomienda calibrar el sensor con el suelo de la parcela.
@@ -171,11 +172,11 @@ const monthOk = (plant, m) => {
  * Mejor mes de siembra: dentro de los meses térmicamente aptos (y permitidos), elige el inicio
  * cuya secuencia de `need` meses consecutivos aptos recibe más lluvia climatológica.
  */
-function bestWindow(plant, months, allowed, need) {
+function bestWindow(plant, months, allowed, need, starts) {
   const ok = months.map((m, i) => allowed.includes(i + 1) && monthOk(plant, m));
   let best = { start: null, length: 0, fit: 0, rain: -1 };
   for (let s = 0; s < 12; s++) {
-    if (!ok[s]) continue;
+    if (!ok[s] || (starts && !starts.includes(s + 1))) continue;
     let len = 0;
     while (len < 12 && ok[(s + len) % 12]) len++;
     const fit = Math.min(len, need);
@@ -203,7 +204,7 @@ export function compatibility(plant, ctx) {
       reasons.push({ key: plant.frostSensitive ? 'compat.perennialMonthsFrost' : 'compat.perennialMonths', vars: { ok: okCount, a: plant.temp[0], b: plant.temp[1] } });
     } else {
       const need = Math.max(1, Math.ceil((plant.cycle?.[0] || 90) / 30.4));
-      window = bestWindow(plant, months, allowed, need);
+      window = bestWindow(plant, months, allowed, need, ctx.startMonths);
       const s = clamp(window.length / need, 0, 1);
       factors.push({ id: 'temp', w: 0.4, s, source: 'NASA POWER' });
       reasons.push(window.length
@@ -252,12 +253,41 @@ export const PRIORITY_LABELS = { agua: 'Ahorro de agua', suelo: 'Regenerar suelo
 const PV = [6, 7, 8, 9, 10];        // primavera-verano (temporal de lluvias en Michoacán)
 const OI = [11, 12, 1, 2, 3, 4, 5]; // otoño-invierno
 
-function seasonPick(ctx, months, filter, exclude = []) {
+function seasonPick(ctx, months, filter, exclude = [], after = null) {
   const ranked = PLANTS.filter((p) => !p.perennial && !p.added && filter(p) && !exclude.includes(p.family))
-    .map((p) => compatibility(p, { ...ctx, allowedMonths: months }))
-    .filter((r) => r.score !== null)
+    .map((p) => {
+      if (!after) return compatibility(p, { ...ctx, allowedMonths: months });
+      // Respeta el tiempo entre cultivos: siembra después de la cosecha anterior + descanso mínimo,
+      // y termina (con su propio descanso) antes de que el cultivo anterior vuelva a sembrarse.
+      const fit = startsAfter(after, p).filter((x) => months.includes(x.month));
+      if (!fit.length) return null;
+      const r = compatibility(p, { ...ctx, allowedMonths: ALL_MONTHS, startMonths: fit.map((x) => x.month) });
+      if (r.window?.start) r.window.sowDoy = fit.find((x) => x.month === r.window.start)?.sowDoy;
+      return r;
+    })
+    .filter((r) => r && r.score !== null && (!after || r.window?.start))
     .sort((a, b) => b.score - a.score || Number(b.plant.mich || 0) - Number(a.plant.mich || 0));
   return ranked[0] || null;
+}
+
+const ALL_MONTHS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+const midCycle = (plant) => Math.round(((plant.cycle?.[0] || 90) + (plant.cycle?.[1] || plant.cycle?.[0] || 90)) / 2);
+
+/** Meses (y día del año) en que `plant` puede sembrarse después de `first` sin traslaparse con él. */
+function startsAfter(first, plant) {
+  if (!first?.window?.start) return [];
+  const firstSow = first.window.sowDoy ?? MONTH_START_DOY[first.window.start - 1];
+  const earliest = firstSow + midCycle(first.plant) + turnaround(first.plant).days;
+  const latest = firstSow + 365 - turnaround(plant).days - midCycle(plant);
+  const out = [];
+  for (let k = 0; k < 24; k++) {
+    const start = MONTH_START_DOY[k % 12] + (k >= 12 ? 365 : 0);
+    const end = start + DAYS_IN_MONTH[k % 12] - 1;
+    const sow = Math.max(start, earliest);
+    if (sow > end - 9 || sow > latest) continue; // deja al menos 10 días del mes para sembrar
+    out.push({ month: (k % 12) + 1, sowDoy: ((Math.round(sow) - 1) % 365) + 1 });
+  }
+  return out;
 }
 
 function cropMonths(s) {
@@ -291,6 +321,100 @@ function strategyMetrics(seq, calendar, prevFamily) {
   return { agua: water, suelo: clamp(soil, 0, 1), plagas: pests, mercado: market, clima: climate, irrigationMm: irrigation };
 }
 
+// ---------- Tiempos entre cultivos: cuándo, por qué y cómo ----------
+const monthOfDoy = (doy) => { const d = ((Math.round(doy) - 1) % 365 + 365) % 365 + 1; let m = 11; while (m > 0 && MONTH_START_DOY[m] > d) m--; return m + 1; };
+
+/** Años orientativos antes de repetir la misma familia botánica en el mismo terreno. */
+export const FAMILY_RETURN_YEARS = {
+  Solanaceae: 3, Brassicaceae: 3, Cucurbitaceae: 3, Amaryllidaceae: 3, Rosaceae: 3,
+  Fabaceae: 2, Apiaceae: 2, Asteraceae: 2, Amaranthaceae: 2, Malvaceae: 2, Poaceae: 1
+};
+export const familyReturnYears = (family) => FAMILY_RETURN_YEARS[family] || 2;
+
+/** Días mínimos orientativos entre la cosecha de un cultivo y la siembra del siguiente, con su motivo. */
+export function turnaround(prev) {
+  if (prev.cover || (prev.legumeN && prev.cat !== 'legume')) return { days: 21, why: 'greenManure' };
+  if (prev.family === 'Poaceae') return { days: 21, why: 'cereal' };
+  if (prev.family === 'Brassicaceae') return { days: 21, why: 'brassica' };
+  if (prev.legumeN || prev.family === 'Fabaceae') return { days: 14, why: 'legume' };
+  if (prev.cat === 'root') return { days: 14, why: 'root' };
+  return { days: 14, why: 'general' };
+}
+
+/**
+ * Plan temporal de una secuencia: siembra, cosecha estimada, días libres entre cultivos frente al
+ * mínimo recomendado, tiempo de retorno de cada familia, y el porqué y el cómo de cada paso.
+ */
+export function rotationPlan(seq, calendar = []) {
+  const annual = seq.filter((s) => !s.plant.perennial && s.window?.start);
+  const timed = annual.map((s) => {
+    const sowDoy = s.window.sowDoy ?? MONTH_START_DOY[s.window.start - 1];
+    const cycle = [s.plant.cycle?.[0] || 90, s.plant.cycle?.[1] || s.plant.cycle?.[0] || 90];
+    const mid = Math.round((cycle[0] + cycle[1]) / 2);
+    return { s, sowDoy, cycle, mid, harvestDoy: sowDoy + mid };
+  });
+  const erosion = new Set(calendar.filter((c) => c.risks.some((r) => r.id === 'erosion')).map((c) => c.month));
+  const steps = seq.map((s) => {
+    const tm = timed.find((x) => x.s === s);
+    const plant = s.plant;
+    const step = { plant, perennial: Boolean(plant.perennial), score: s.score, why: [], how: [] };
+    // Por qué este cultivo.
+    if (plant.perennial) step.why.push({ key: 'plan.whyPerennial' });
+    if (s.window?.length) step.why.push({ key: 'plan.whyWindow', vars: { len: s.window.length, monthKey: s.window.start, a: plant.temp[0], b: plant.temp[1] } });
+    if (s.window?.demandMm) step.why.push(s.window.irrigationMm > 0
+      ? { key: 'plan.whyWaterShort', vars: { rain: s.window.rainMm, demand: s.window.demandMm, irrigation: s.window.irrigationMm } }
+      : { key: 'plan.whyWaterOk', vars: { rain: s.window.rainMm, demand: s.window.demandMm } });
+    if (plant.legumeN) step.why.push({ key: 'plan.whyLegume' });
+    if (plant.cover) step.why.push({ key: 'plan.whyCover' });
+    if (!tm) return step;
+    const i = timed.indexOf(tm);
+    const next = timed[(i + 1) % timed.length];
+    const prevT = timed[(i - 1 + timed.length) % timed.length];
+    if (timed.length > 1 && prevT.s.plant.family !== plant.family) step.why.push({ key: 'plan.whyFamily', vars: { family: plant.family, prev: prevT.s.plant.family } });
+    const covered = [...erosion].filter((m) => cropMonths(s).includes(m - 1));
+    if (covered.length) step.why.push({ key: 'plan.whyErosion', vars: { n: covered.length } });
+    // Cuándo.
+    step.sowMonth = s.window.start;
+    step.sowDoy = tm.sowDoy;
+    step.harvestDoy = [tm.sowDoy + tm.cycle[0], tm.sowDoy + tm.cycle[1]];
+    step.cycle = tm.cycle;
+    step.harvestMonth = monthOfDoy(tm.harvestDoy);
+    step.harvestMonthEarly = monthOfDoy(tm.sowDoy + tm.cycle[0]);
+    step.harvestMonthLate = monthOfDoy(tm.sowDoy + tm.cycle[1]);
+    // Días libres hasta la siguiente siembra (del mismo cultivo el año siguiente si la secuencia tiene uno).
+    let nextSow = next.sowDoy;
+    while (nextSow <= tm.sowDoy) nextSow += 365;
+    const gap = nextSow - tm.harvestDoy;
+    const min = turnaround(plant);
+    step.next = { plant: next.s.plant, sowMonth: next.s.window.start, sowDoy: next.sowDoy, gapDays: gap, minDays: min.days, minWhy: min.why, overlapDays: gap < 0 ? -gap : 0, ok: gap >= min.days };
+    // Cómo hacerlo.
+    step.how.push({ key: 'plan.howSow', vars: { sowDoy: tm.sowDoy, a: tm.cycle[0], b: tm.cycle[1], h1Doy: step.harvestDoy[0], h2Doy: step.harvestDoy[1] } });
+    if (s.window.irrigationMm > 0) step.how.push({ key: 'plan.howIrrigate', vars: { mm: s.window.irrigationMm, m3: s.window.irrigationMm * 10 } });
+    step.how.push({ key: `plan.turn.${min.why}`, vars: { days: min.days } });
+    if (gap < 0) step.how.push({ key: 'plan.howOverlap', vars: { days: -gap, crop: next.s.plant.name, cropId: next.s.plant.id } });
+    else if (gap < min.days) step.how.push({ key: 'plan.howTight', vars: { gap, min: min.days } });
+    else if (gap > 75) step.how.push({ key: 'plan.howFallow', vars: { gap } });
+    else step.how.push({ key: 'plan.howGapOk', vars: { gap, min: min.days } });
+    return step;
+  });
+  // Tiempo de retorno: meses entre dos siembras de la misma familia si la secuencia se repite cada año.
+  const families = [...new Set(timed.map((x) => x.s.plant.family))].map((family) => {
+    const sows = timed.filter((x) => x.s.plant.family === family).map((x) => x.sowDoy).sort((a, b) => a - b);
+    const gaps = sows.map((d, k) => (k + 1 < sows.length ? sows[k + 1] - d : sows[0] + 365 - d));
+    const months = Math.round(Math.min(...gaps) / 30.4);
+    const recommended = familyReturnYears(family) * 12;
+    return { family, months, recommended, ok: months >= recommended };
+  });
+  const gaps = steps.filter((x) => x.next).map((x) => x.next.gapDays);
+  return {
+    steps, families,
+    occupiedDays: Math.min(365, timed.reduce((a, x) => a + x.mid, 0)),
+    freeDays: gaps.length ? gaps.reduce((a, g) => a + Math.max(0, g), 0) : null,
+    conflict: steps.some((x) => x.next && !x.next.ok),
+    repeat: families.some((f) => !f.ok)
+  };
+}
+
 /**
  * Tres estrategias de rotación comparables, ponderadas por las prioridades del productor.
  * ctx: { months, ph, ec }, currentCrop: objeto de PLANTS o null, priorities: ['agua', ...]
@@ -319,10 +443,13 @@ export function rotationStrategies(ctx, currentCrop, priorities = []) {
     }
   } else {
     const pvMain = currentCrop ? compatibility(currentCrop, { ...ctx, allowedMonths: PV }) : seasonPick(ctx, PV, (p) => p.mich && p.cat === 'cereal');
-    const cover = seasonPick(ctx, OI, (p) => p.cover);
-    const legume = seasonPick(ctx, OI, (p) => p.legumeN, pvMain ? [pvMain.plant.family] : []);
+    // El segundo cultivo se elige respetando el tiempo entre cultivos; si ninguno cabe, se muestra
+    // la mejor opción climática y el plan marca el conflicto de fechas.
+    const second = (first, filter, exclude) => seasonPick(ctx, OI, filter, exclude, first) || seasonPick(ctx, OI, filter, exclude);
+    const cover = second(pvMain, (p) => p.cover, []);
+    const legume = second(pvMain, (p) => p.legumeN, pvMain ? [pvMain.plant.family] : []);
     const hortPV = seasonPick(ctx, PV, (p) => ['fruitveg', 'leafveg'].includes(p.cat) && p.mich, prevFamily ? [prevFamily] : []);
-    const hortOI = seasonPick(ctx, OI, (p) => (p.legumeN || p.family === 'Brassicaceae'), hortPV ? [hortPV.plant.family] : []);
+    const hortOI = second(hortPV, (p) => (p.legumeN || p.family === 'Brassicaceae'), hortPV ? [hortPV.plant.family] : []);
     const defs = [
       { id: 'A', nameKey: 'rot.contName', seq: [pvMain, cover].filter(Boolean), noteKey: 'rot.contNote' },
       { id: 'B', nameKey: 'rot.legName', seq: [pvMain, legume].filter(Boolean), noteKey: 'rot.legNote' },
@@ -335,7 +462,7 @@ export function rotationStrategies(ctx, currentCrop, priorities = []) {
     }
   }
   const best = strategies.reduce((a, s) => (!a || s.score > a.score ? s : a), null);
-  return strategies.map((s) => ({ ...s, recommended: s === best }));
+  return strategies.map((s) => ({ ...s, recommended: s === best, plan: rotationPlan(s.seq, calendar) }));
 }
 
 // ---------- Fusión Δ y predicciones ----------

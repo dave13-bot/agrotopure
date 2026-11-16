@@ -6,7 +6,7 @@ import { polygonAreaM2, centroid, isSelfIntersecting } from './geo.js';
 export const PRIORITIES = ['agua', 'suelo', 'plagas', 'mercado', 'clima'];
 export const LOCALES = ['es', 'en'];
 /** Tipos de alerta que el usuario puede activar o silenciar. */
-export const ALERT_TYPES = ['storm', 'fire', 'flood', 'drought', 'volcano', 'frost', 'heat', 'uv', 'rain', 'wind', 'dry'];
+export const ALERT_TYPES = ['storm', 'fire', 'flood', 'drought', 'volcano', 'frost', 'heat', 'uv', 'rain', 'wind', 'dry', 'health'];
 const SOIL_TEXTURES = ['arenoso', 'franco-arenoso', 'franco', 'franco-limoso', 'franco-arcilloso', 'arcilloso', 'desconocido'];
 
 /** Variables aceptadas en lecturas (sensor o captura manual) y su rango válido. */
@@ -41,12 +41,19 @@ export async function getProfile(store, user) {
   return e ? profileOut(e) : null;
 }
 
+// Los perfiles guardados antes de existir la alerta de salud del cultivo la reciben activada.
+function alertTypesOut(e) {
+  if (e.alertTypes === undefined || e.alertTypes === '') return [...ALERT_TYPES];
+  const list = parseJson(e.alertTypes, ALERT_TYPES).filter((a) => ALERT_TYPES.includes(a));
+  return e.alertsV === 2 || list.includes('health') ? list : [...list, 'health'];
+}
+
 function profileOut(e) {
   return {
     name: e.name, region: e.region, priorities: parseJson(e.priorities, []),
     locale: LOCALES.includes(e.locale) ? e.locale : 'es',
     fineAnalysis: e.fineAnalysis === true,
-    alertTypes: e.alertTypes === undefined || e.alertTypes === '' ? [...ALERT_TYPES] : parseJson(e.alertTypes, ALERT_TYPES),
+    alertTypes: alertTypesOut(e),
     provider: e.provider, userDetails: e.userDetails, createdAt: e.createdAt, updatedAt: e.updatedAt
   };
 }
@@ -63,7 +70,7 @@ export async function saveProfile(store, user, body) {
     priorities: JSON.stringify([...new Set(priorities)]),
     locale: LOCALES.includes(body.locale) ? body.locale : 'es',
     fineAnalysis: body.fineAnalysis === true,
-    alertTypes: JSON.stringify([...new Set(alertTypes)]),
+    alertTypes: JSON.stringify([...new Set(alertTypes)]), alertsV: 2,
     provider: user.provider, userDetails: user.userDetails,
     createdAt: prev?.createdAt || t, updatedAt: t
   };
@@ -81,7 +88,7 @@ function parcelOut(e) {
   return {
     id: e.rowKey, name: e.name, crop: e.crop, coordinates: parseJson(e.coordinates, []),
     areaHa: e.areaHa, centroid: { lat: e.lat, lon: e.lon }, soilTexture: e.soilTexture,
-    notes: e.notes, createdAt: e.createdAt, updatedAt: e.updatedAt
+    sowDate: e.sowDate || '', notes: e.notes, createdAt: e.createdAt, updatedAt: e.updatedAt
   };
 }
 
@@ -99,7 +106,9 @@ export function validateParcel(body) {
   if (areaM2 < 10) throw new HttpError(400, 'El área de la parcela es demasiado pequeña.', 'bad_parcel');
   if (areaM2 > 5e8) throw new HttpError(400, 'El área supera 50,000 ha; divide el terreno en parcelas.', 'bad_parcel');
   const soilTexture = SOIL_TEXTURES.includes(body.soilTexture) ? body.soilTexture : 'desconocido';
-  return { name, crop: str(body.crop, 60), coordinates, areaHa: Math.round(areaM2 / 100) / 100, c: centroid(coordinates), soilTexture, notes: str(body.notes, 500) };
+  const sowDate = body.sowDate ? String(body.sowDate).slice(0, 10) : '';
+  if (sowDate && (!/^\d{4}-\d{2}-\d{2}$/.test(sowDate) || Number.isNaN(Date.parse(`${sowDate}T12:00:00Z`)))) throw new HttpError(400, 'La fecha de siembra no es válida.', 'bad_parcel');
+  return { name, crop: str(body.crop, 60), coordinates, areaHa: Math.round(areaM2 / 100) / 100, c: centroid(coordinates), soilTexture, sowDate, notes: str(body.notes, 500) };
 }
 
 export async function listParcels(store, user) {
@@ -112,15 +121,23 @@ export async function getOwnedParcel(store, user, parcelId) {
   return e;
 }
 
-export async function saveParcel(store, user, body, parcelId) {
+/**
+ * Guarda una parcela. `landCheck` (opcional) consulta la máscara tierra/agua de NASA GIBS:
+ * si confirma que el terreno está en el océano o en un cuerpo de agua, la parcela se rechaza.
+ */
+export async function saveParcel(store, user, body, parcelId, { landCheck } = {}) {
   const v = validateParcel(body);
+  if (landCheck) {
+    const land = await landCheck(v.coordinates);
+    if (land?.checked && !land.onLand) throw new HttpError(400, 'La parcela queda sobre el océano o un cuerpo de agua. Colócala en tierra firme.', 'on_water');
+  }
   const prev = parcelId ? await getOwnedParcel(store, user, parcelId) : null;
   if (!prev && (await store.list('parcels', user.userId)).length >= 100) throw new HttpError(400, 'Límite de 100 parcelas por cuenta.', 'limit');
   const t = now().toISOString();
   const e = {
     partitionKey: user.userId, rowKey: prev?.rowKey || id('par'), name: v.name, crop: v.crop,
     coordinates: JSON.stringify(v.coordinates), areaHa: v.areaHa, lat: v.c.lat, lon: v.c.lon,
-    soilTexture: v.soilTexture, notes: v.notes, createdAt: prev?.createdAt || t, updatedAt: t
+    soilTexture: v.soilTexture, sowDate: v.sowDate, notes: v.notes, createdAt: prev?.createdAt || t, updatedAt: t
   };
   await store.upsert('parcels', e);
   return parcelOut(e);

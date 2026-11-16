@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { nasa } from './api.js';
 import { enrichDaily, monthlyClimate, latestReadings } from './agro.js';
 import { buildAlerts } from './alerts.js';
+import { cropHealth, healthAlert } from './health.js';
 import { findPlantByName } from '../data/plants.js';
 
 /** Carga NASA POWER (diario y climatología), MODIS y lecturas de sensores de una parcela. */
@@ -31,14 +32,16 @@ export function useParcelData(parcel, repo, { modis = false, climatology = true,
     const daily = enrichDaily(state.power, lat);
     const months = monthlyClimate(state.clim, lat);
     const sensor = latestReadings(state.readings || []);
+    const plant = findPlantByName(parcel?.crop);
+    const health = state.modisData ? cropHealth({ ndviSeries: state.modisData.ndvi, plant, sowDate: parcel?.sowDate, daily: daily.daily }) : null;
     const alerts = buildAlerts({
       eonet: state.eonetData, daily: daily.daily, months,
-      crop: findPlantByName(parcel?.crop),
+      crop: plant, health: healthAlert(health, plant?.name),
       enabled: types ? types.split(',') : undefined
     });
-    return { ...daily, months, sensor, alerts };
+    return { ...daily, months, sensor, alerts, health };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.power, state.clim, state.readings, state.eonetData, c?.lat, types, parcel?.crop]);
+  }, [state.power, state.clim, state.readings, state.eonetData, state.modisData, c?.lat, types, parcel?.crop, parcel?.sowDate]);
 
   const reloadReadings = useCallback(async () => {
     if (!parcel) return;

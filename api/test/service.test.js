@@ -72,3 +72,18 @@ test('lecturas manuales y borrado de cuenta', async () => {
   assert.equal((await svc.listDevices(s, alice)).length, 0);
   assert.equal(await svc.getProfile(s, alice), null);
 });
+
+test('perfil: idioma, análisis fino y tipos de alerta', async () => {
+  const s = new MemoryStore();
+  const p = await svc.saveProfile(s, alice, { name: 'Ana' });
+  assert.equal(p.locale, 'es');
+  assert.equal(p.fineAnalysis, false);
+  assert.equal(p.alertTypes.length, svc.ALERT_TYPES.length);
+  const q = await svc.saveProfile(s, alice, { name: 'Ana', locale: 'en', fineAnalysis: true, alertTypes: ['storm', 'frost', 'inventado'] });
+  assert.equal(q.locale, 'en');
+  assert.equal(q.fineAnalysis, true);
+  assert.deepEqual(q.alertTypes, ['storm', 'frost']);
+  assert.equal((await svc.getProfile(s, alice)).locale, 'en');
+  const r = await svc.saveProfile(s, alice, { name: 'Ana', locale: 'klingon' });
+  assert.equal(r.locale, 'es');
+});

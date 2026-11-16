@@ -42,7 +42,7 @@ test('climatología, calendario y compatibilidad', () => {
   const arroz = agro.compatibility(plantById('arroz'), { months, ph: 6.4, ec: 0.5 });
   assert.ok(maiz.score > arroz.score);
   const acid = agro.compatibility(plantById('arandano'), { months, ph: 7.5 });
-  assert.ok(acid.reasons.some((r) => r.includes('fuera')));
+  assert.ok(acid.reasons.some((r) => r.key === 'compat.phOut'));
   assert.ok(lechuga.score !== null);
 });
 
@@ -68,7 +68,8 @@ test('fusión Δ y predicción de riego', () => {
   assert.equal(f.prediction.daysToIrrigate, Math.round((26 - 19.5) / 0.8));
   assert.ok(f.hiddenWindow);
   const dry = agro.fusion({ sensor: { moisture25: { value: 15 } }, nasa: {}, texture: 'franco', readings: [] });
-  assert.equal(dry.insights[0].title, 'Regar ahora');
+  assert.equal(dry.insights[0].titleKey, 'fusion.irrigateTitle');
+  assert.equal(dry.insights[0].textVars.textureKey, 'franco');
 });
 
 test('geometría: área, coordenadas DMS y orden de esquinas', () => {

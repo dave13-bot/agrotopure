@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { powerDaily, powerClimatology, modis, modisDate } from '../src/lib/nasa.js';
+import { powerDaily, powerClimatology, modis, modisDate, eonet } from '../src/lib/nasa.js';
 
 test('fecha MODIS', () => { assert.equal(modisDate(new Date(Date.UTC(2026, 10, 1))), 'A2026305'); });
 
@@ -27,12 +27,13 @@ test('POWER diario: valores de relleno -999 se vuelven null y se lee la elevaci�
 });
 
 test('POWER diario: reintenta con parámetros mínimos si POWER responde 422', async (t) => {
-  let n = 0;
-  t.mock.method(globalThis, 'fetch', async () => (++n === 1
-    ? respond({ messages: ['parámetro inválido'] }, 422)
-    : respond({ properties: { parameter: { T2M: { 20261101: 20 } } } })));
+  let core = 0;
+  t.mock.method(globalThis, 'fetch', async (url) => {
+    if (url.includes('CLRSKY_SFC_SW_DWN')) return respond({ properties: { parameter: {} } });
+    return ++core === 1 ? respond({ messages: ['parámetro inválido'] }, 422) : respond({ properties: { parameter: { T2M: { 20261101: 20 } } } });
+  });
   const r = await powerDaily(10.1, 10.1, 15);
-  assert.equal(n, 2);
+  assert.equal(core, 2, 'reintento del grupo principal');
   assert.equal(r.daily[0].t2m, 20);
 });
 
@@ -54,4 +55,40 @@ test('MODIS ORNL: escala NDVI y LST', async (t) => {
   assert.equal(r.ndvi[0].value, 0.651);
   assert.equal(r.ndvi[1].value, null);
   assert.equal(r.lstDayC[0].value, 26.9);
+});
+
+test('EONET: bbox correcto, distancia y filtrado por radio', async (t) => {
+  const calls = [];
+  t.mock.method(globalThis, 'fetch', async (url) => {
+    calls.push(url);
+    return respond({ events: [
+      { id: 'EONET_1', title: 'Huracán Prueba', categories: [{ id: 'severeStorms', title: 'Severe Storms' }], sources: [{ id: 'JTWC', url: 'https://x' }],
+        geometry: [{ type: 'Point', date: '2026-11-14T00:00:00Z', coordinates: [-103.0, 19.5], magnitudeValue: 75, magnitudeUnit: 'kts' }] },
+      { id: 'EONET_2', title: 'Incendio lejano', categories: [{ id: 'wildfires', title: 'Wildfires' }], sources: [],
+        geometry: [{ type: 'Point', date: '2026-11-10T00:00:00Z', coordinates: [-80.0, 19.5] }] }
+    ] });
+  });
+  const r = await eonet(19.42, -102.06, { radiusKm: 300, days: 30 });
+  const bbox = new URL(calls[0]).searchParams.get('bbox').split(',').map(Number);
+  assert.ok(bbox[0] < -102.06 && bbox[2] > -102.06, 'longitudes');
+  assert.ok(bbox[1] > 19.42 && bbox[3] < 19.42, 'bbox va de arriba-izquierda a abajo-derecha');
+  assert.equal(r.events.length, 1, 'el evento fuera del radio se descarta');
+  assert.equal(r.events[0].id, 'EONET_1');
+  assert.ok(r.events[0].distanceKm > 90 && r.events[0].distanceKm < 120, `distancia ${r.events[0].distanceKm}`);
+  assert.equal(r.events[0].magnitudeValue, 75);
+  assert.ok(r.disclaimer.includes('no es una fuente oficial'));
+});
+
+test('POWER: el grupo solar es opcional y no tumba la consulta', async (t) => {
+  t.mock.method(globalThis, 'fetch', async (url) => {
+    if (url.includes('ALLSKY_SFC_UV_INDEX')) return respond({ messages: ['parameter ALLSKY_SFC_UV_INDEX not found'] }, 422);
+    if (url.includes('CLRSKY_SFC_SW_DWN')) return respond({ properties: { parameter: { CLRSKY_SFC_SW_DWN: { 20261101: 22.2 }, ALLSKY_KT: { 20261101: 0.62 } } } });
+    return respond({ properties: { parameter: { T2M: { 20261101: 19 }, ALLSKY_SFC_SW_DWN: { 20261101: 18.1 } } } });
+  });
+  const r = await powerDaily(19.1, -102.1, 30);
+  assert.equal(r.daily[0].t2m, 19);
+  assert.equal(r.daily[0].radClear, 22.2);
+  assert.equal(r.daily[0].kt, 0.62);
+  assert.equal(r.daily[0].uv, undefined);
+  assert.ok(r.notes[0].includes('ALLSKY_SFC_UV_INDEX'));
 });

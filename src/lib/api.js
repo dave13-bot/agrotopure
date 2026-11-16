@@ -1,5 +1,9 @@
 // Capa de datos: nube (Azure Functions + Table Storage) o local (este navegador).
 import { polygonAreaM2, centroid, isSelfIntersecting } from './geo.js';
+import { ALERT_TYPES } from './alerts.js';
+
+const LOCALES = ['es', 'en'];
+const PRIORITIES = ['agua', 'suelo', 'plagas', 'mercado', 'clima'];
 
 export class ApiError extends Error {
   constructor(status, message, code) { super(message); this.status = status; this.code = code; }
@@ -79,11 +83,23 @@ export function localRepo(namespace) {
   const noDevices = () => { throw new ApiError(503, 'Los dispositivos ESP32/Raspberry Pi necesitan una cuenta con almacenamiento en la nube.', 'local_mode'); };
   return {
     mode: 'local',
-    async getProfile() { return db().profile; },
+    async getProfile() {
+      const p = db().profile;
+      if (!p) return null;
+      return { locale: 'es', fineAnalysis: false, alertTypes: [...ALERT_TYPES], ...p };
+    },
     async saveProfile(p) {
       if (!p.name?.trim()) throw new ApiError(400, 'Escribe tu nombre.');
       const d = db(); const t = new Date().toISOString();
-      d.profile = { name: p.name.trim().slice(0, 80), region: (p.region || '').trim().slice(0, 80), priorities: p.priorities || [], createdAt: d.profile?.createdAt || t, updatedAt: t };
+      d.profile = {
+        name: p.name.trim().slice(0, 80),
+        region: (p.region || '').trim().slice(0, 80),
+        priorities: [...new Set((p.priorities || []).filter((x) => PRIORITIES.includes(x)))],
+        locale: LOCALES.includes(p.locale) ? p.locale : 'es',
+        fineAnalysis: p.fineAnalysis === true,
+        alertTypes: Array.isArray(p.alertTypes) ? [...new Set(p.alertTypes.filter((x) => ALERT_TYPES.includes(x)))] : [...ALERT_TYPES],
+        createdAt: d.profile?.createdAt || t, updatedAt: t
+      };
       save(d); return d.profile;
     },
     async deleteAccount() { localStorage.removeItem(key); },

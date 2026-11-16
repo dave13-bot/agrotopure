@@ -3,6 +3,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Layers, LocateFixed } from 'lucide-react';
 import { BASE_LAYERS, GIBS_WMS, NASA_OVERLAYS } from '../lib/layers.js';
+import { useI18n } from '../lib/i18n.js';
 
 const MICHOACAN = [19.57, -101.71];
 
@@ -12,6 +13,7 @@ const MICHOACAN = [19.57, -101.71];
  * - draft: [{lat,lon}] y onDraftChange(points): activa el modo dibujo (clic = nueva esquina, arrastrar = mover).
  */
 export default function ParcelMap({ parcels = [], selectedId, onSelect, draft, onDraftChange, overlays: initialOverlays = [], height = 'h-[420px]', fitKey }) {
+  const { t, locale } = useI18n();
   const el = useRef(null);
   const map = useRef(null);
   const groups = useRef({});
@@ -23,6 +25,8 @@ export default function ParcelMap({ parcels = [], selectedId, onSelect, draft, o
   const [overlays, setOverlays] = useState(initialOverlays);
   const [panel, setPanel] = useState(false);
   const [geoError, setGeoError] = useState('');
+  const cornerLabel = useRef(t('parcels.corner'));
+  cornerLabel.current = t('parcels.corner');
   draftRef.current = draft;
   changeRef.current = onDraftChange;
   const drawing = Boolean(onDraftChange);
@@ -94,8 +98,8 @@ export default function ParcelMap({ parcels = [], selectedId, onSelect, draft, o
       const mk = L.marker([c.lat, c.lon], {
         draggable: drawing,
         icon: L.divIcon({ className: '', html: `<div class="vertex-marker${i === 0 ? ' first' : ''}"></div>`, iconSize: [14, 14], iconAnchor: [7, 7] }),
-        title: `Esquina ${i + 1}`
-      }).bindTooltip(`Esquina ${i + 1}`, { direction: 'top', offset: [0, -6] });
+        title: `${cornerLabel.current} ${i + 1}`
+      }).bindTooltip(`${cornerLabel.current} ${i + 1}`, { direction: 'top', offset: [0, -6] });
       mk.on('dragend', (e) => {
         const ll = e.target.getLatLng();
         changeRef.current?.(draftRef.current.map((p, j) => (j === i ? { lat: +ll.lat.toFixed(6), lon: +ll.lng.toFixed(6) } : p)));
@@ -106,38 +110,38 @@ export default function ParcelMap({ parcels = [], selectedId, onSelect, draft, o
 
   const locate = () => {
     setGeoError('');
-    if (!navigator.geolocation) { setGeoError('Este dispositivo no ofrece ubicación.'); return; }
+    if (!navigator.geolocation) { setGeoError(t('parcels.myLocation')); return; }
     navigator.geolocation.getCurrentPosition(
       (pos) => map.current.setView([pos.coords.latitude, pos.coords.longitude], 17),
-      () => setGeoError('No se pudo obtener tu ubicación.'),
+      () => setGeoError(t('parcels.myLocation')),
       { enableHighAccuracy: true, timeout: 15000 }
     );
   };
 
   return (
     <div className={`relative ${height} w-full`}>
-      <div ref={el} className="h-full w-full" aria-label="Mapa de parcelas" />
+      <div ref={el} className="h-full w-full" aria-label={t('nav.parcels')} />
       <div className="absolute right-3 top-3 z-[500] flex flex-col items-end gap-2">
-        <button type="button" onClick={() => setPanel((v) => !v)} className="flex h-10 items-center gap-2 rounded-xl bg-white px-3 text-xs font-bold text-slate-700 shadow-md" aria-expanded={panel}><Layers size={16} />Capas NASA</button>
-        <button type="button" onClick={locate} className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-slate-700 shadow-md" title="Mi ubicación" aria-label="Ir a mi ubicación"><LocateFixed size={17} /></button>
+        <button type="button" onClick={() => setPanel((v) => !v)} className="flex h-10 items-center gap-2 rounded-xl bg-white px-3 text-xs font-bold text-slate-700 shadow-md" aria-expanded={panel}><Layers size={16} />{t('parcels.nasaLayers')}</button>
+        <button type="button" onClick={locate} className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-slate-700 shadow-md" title={t('parcels.myLocation')} aria-label={t('parcels.myLocation')}><LocateFixed size={17} /></button>
         {panel && (
           <div className="w-72 rounded-2xl bg-white p-3 text-xs shadow-xl">
-            <p className="mb-1 font-extrabold text-slate-700">Mapa base</p>
+            <p className="mb-1 font-extrabold text-slate-700">{t('parcels.baseMap')}</p>
             {BASE_LAYERS.map((b) => (
-              <label key={b.id} className="flex cursor-pointer items-center gap-2 py-1"><input type="radio" name="base" checked={base === b.id} onChange={() => setBase(b.id)} />{b.name}</label>
+              <label key={b.id} className="flex cursor-pointer items-center gap-2 py-1"><input type="radio" name="base" checked={base === b.id} onChange={() => setBase(b.id)} />{locale === 'en' ? b.nameEn : b.name}</label>
             ))}
-            <p className="mb-1 mt-2 font-extrabold text-slate-700">Datos satelitales NASA (GIBS)</p>
+            <p className="mb-1 mt-2 font-extrabold text-slate-700">{t('parcels.nasaData')}</p>
             {NASA_OVERLAYS.map((o) => (
-              <label key={o.id} className="flex cursor-pointer items-start gap-2 py-1" title={o.legend}>
+              <label key={o.id} className="flex cursor-pointer items-start gap-2 py-1" title={locale === 'en' ? o.legendEn : o.legend}>
                 <input type="checkbox" className="mt-0.5" checked={overlays.includes(o.id)} onChange={(e) => setOverlays((v) => (e.target.checked ? [...v, o.id] : v.filter((x) => x !== o.id)))} />
-                <span>{o.name}</span>
+                <span>{locale === 'en' ? o.nameEn : o.name}</span>
               </label>
             ))}
-            <p className="mt-2 text-[10px] leading-snug text-slate-500">Las capas NASA muestran la fecha más reciente disponible; su resolución (30 m a 9 km) es mayor que muchas parcelas.</p>
+            <p className="mt-2 text-[10px] leading-snug text-slate-500">{t('parcels.layerNote')}</p>
           </div>
         )}
       </div>
-      {drawing && <div className="pointer-events-none absolute bottom-3 left-3 z-[500] rounded-xl bg-white/95 px-3 py-2 text-xs font-bold text-slate-700 shadow">Toca el mapa para marcar cada esquina · arrastra un punto para moverlo</div>}
+      {drawing && <div className="pointer-events-none absolute bottom-3 left-3 z-[500] rounded-xl bg-white/95 px-3 py-2 text-xs font-bold text-slate-700 shadow">{t('parcels.mapHint')}</div>}
       {geoError && <div className="absolute bottom-3 right-3 z-[500] rounded-xl bg-rose-50 px-3 py-2 text-xs font-bold text-rose-700 shadow">{geoError}</div>}
     </div>
   );

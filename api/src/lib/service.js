@@ -4,6 +4,9 @@ import { HttpError, num } from './http.js';
 import { polygonAreaM2, centroid, isSelfIntersecting } from './geo.js';
 
 export const PRIORITIES = ['agua', 'suelo', 'plagas', 'mercado', 'clima'];
+export const LOCALES = ['es', 'en'];
+/** Tipos de alerta que el usuario puede activar o silenciar. */
+export const ALERT_TYPES = ['storm', 'fire', 'flood', 'drought', 'volcano', 'frost', 'heat', 'uv', 'rain', 'wind', 'dry'];
 const SOIL_TEXTURES = ['arenoso', 'franco-arenoso', 'franco', 'franco-limoso', 'franco-arcilloso', 'arcilloso', 'desconocido'];
 
 /** Variables aceptadas en lecturas (sensor o captura manual) y su rango válido. */
@@ -41,6 +44,9 @@ export async function getProfile(store, user) {
 function profileOut(e) {
   return {
     name: e.name, region: e.region, priorities: parseJson(e.priorities, []),
+    locale: LOCALES.includes(e.locale) ? e.locale : 'es',
+    fineAnalysis: e.fineAnalysis === true,
+    alertTypes: e.alertTypes === undefined || e.alertTypes === '' ? [...ALERT_TYPES] : parseJson(e.alertTypes, ALERT_TYPES),
     provider: e.provider, userDetails: e.userDetails, createdAt: e.createdAt, updatedAt: e.updatedAt
   };
 }
@@ -49,11 +55,16 @@ export async function saveProfile(store, user, body) {
   const name = str(body.name, 80);
   if (!name) throw new HttpError(400, 'Escribe tu nombre.', 'bad_profile');
   const priorities = Array.isArray(body.priorities) ? body.priorities.filter((p) => PRIORITIES.includes(p)) : [];
+  const alertTypes = Array.isArray(body.alertTypes) ? body.alertTypes.filter((a) => ALERT_TYPES.includes(a)) : ALERT_TYPES;
   const prev = await store.get('profiles', 'profile', user.userId);
   const t = now().toISOString();
   const e = {
     partitionKey: 'profile', rowKey: user.userId, name, region: str(body.region, 80),
-    priorities: JSON.stringify([...new Set(priorities)]), provider: user.provider, userDetails: user.userDetails,
+    priorities: JSON.stringify([...new Set(priorities)]),
+    locale: LOCALES.includes(body.locale) ? body.locale : 'es',
+    fineAnalysis: body.fineAnalysis === true,
+    alertTypes: JSON.stringify([...new Set(alertTypes)]),
+    provider: user.provider, userDetails: user.userDetails,
     createdAt: prev?.createdAt || t, updatedAt: t
   };
   await store.upsert('profiles', e);

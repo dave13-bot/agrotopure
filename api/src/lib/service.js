@@ -1,7 +1,7 @@
 // Lógica de negocio independiente del runtime (probada con MemoryStore).
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import { HttpError, num } from './http.js';
-import { polygonAreaM2, centroid, isSelfIntersecting } from './geo.js';
+import { polygonAreaM2, centroid, isSelfIntersecting, MAX_PARCEL_HA } from './geo.js';
 
 export const PRIORITIES = ['agua', 'suelo', 'plagas', 'mercado', 'clima'];
 export const LOCALES = ['es', 'en'];
@@ -104,7 +104,7 @@ export function validateParcel(body) {
   if (isSelfIntersecting(coordinates)) throw new HttpError(400, 'Los lados del polígono se cruzan: revisa el orden de las esquinas.', 'bad_parcel');
   const areaM2 = polygonAreaM2(coordinates);
   if (areaM2 < 10) throw new HttpError(400, 'El área de la parcela es demasiado pequeña.', 'bad_parcel');
-  if (areaM2 > 5e8) throw new HttpError(400, 'El área supera 50,000 ha; divide el terreno en parcelas.', 'bad_parcel');
+  if (areaM2 > MAX_PARCEL_HA * 1e4) throw new HttpError(400, `La parcela mide más de ${MAX_PARCEL_HA.toLocaleString('es-MX')} ha. Divide el terreno en varias parcelas.`, 'too_big');
   const soilTexture = SOIL_TEXTURES.includes(body.soilTexture) ? body.soilTexture : 'desconocido';
   const sowDate = body.sowDate ? String(body.sowDate).slice(0, 10) : '';
   if (sowDate && (!/^\d{4}-\d{2}-\d{2}$/.test(sowDate) || Number.isNaN(Date.parse(`${sowDate}T12:00:00Z`)))) throw new HttpError(400, 'La fecha de siembra no es válida.', 'bad_parcel');

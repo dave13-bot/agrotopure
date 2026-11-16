@@ -4,7 +4,7 @@ import { ArrowLeft, ClipboardPaste, Pencil, Plus, RotateCcw, Shuffle, Trash2, Un
 import ParcelMap from '../components/ParcelMap.jsx';
 import { Badge, Card, Empty, Modal, Notice, SectionTitle } from '../components/ui.jsx';
 import { useI18n } from '../lib/i18n.js';
-import { formatHa, isSelfIntersecting, orderCorners, parseCoord, polygonAreaM2, centroid } from '../lib/geo.js';
+import { formatHa, isSelfIntersecting, orderCorners, parseCoord, polygonAreaM2, centroid, MAX_PARCEL_HA, MIN_PARCEL_M2 } from '../lib/geo.js';
 import { TEXTURES } from '../lib/agro.js';
 import { localizedPlants } from '../data/plants.js';
 
@@ -88,6 +88,9 @@ function ParcelEditor({ repo, parcel, parcels, onDone }) {
     return { area: polygonAreaM2(valid) / 1e4, c: centroid(valid), crossing: isSelfIntersecting(valid) };
   }, [JSON.stringify(valid)]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const tooBig = Boolean(stats && stats.area > MAX_PARCEL_HA);
+  const tooSmall = Boolean(stats && stats.area * 1e4 < MIN_PARCEL_M2);
+  const fmtMax = MAX_PARCEL_HA.toLocaleString(locale === 'en' ? 'en-US' : 'es-MX');
   const setDraft = (pts) => setCorners(pts.map((p) => ({ lat: String(p.lat), lon: String(p.lon) })));
   const others = parcels.filter((p) => p.id !== parcel?.id);
   const cropList = localizedPlants(locale);
@@ -98,13 +101,15 @@ function ParcelEditor({ repo, parcel, parcels, onDone }) {
     if (invalidRows.length) { setErr(`${t('parcels.corner')} ${invalidRows[0] + 1}`); return; }
     if (valid.length < 3) { setErr(t('parcels.min3')); return; }
     if (stats?.crossing) { setErr(t('parcels.crossing')); return; }
+    if (tooBig) { setErr(t('parcels.tooBig', { max: fmtMax })); return; }
+    if (tooSmall) { setErr(t('parcels.tooSmall')); return; }
     setBusy(true);
     try {
       // Máscara tierra/agua de NASA GIBS: no se aceptan parcelas en el océano ni en cuerpos de agua.
       const land = await checkLand(valid);
-      if (land.checked && !land.onLand) { setErr(t('parcels.onWater', { pct: Math.round((land.waterFraction || 0) * 100) })); return; }
+      if (land.checked && !land.onLand) { setErr(t('parcels.onWater')); return; }
       onDone(await repo.saveParcel({ ...form, coordinates: valid }, parcel?.id));
-    } catch (ex) { setErr(ex.code === 'on_water' ? t('parcels.onWater', { pct: '' }) : ex.message); } finally { setBusy(false); }
+    } catch (ex) { setErr(ex.code === 'on_water' ? t('parcels.onWater') : ex.code === 'too_big' ? t('parcels.tooBig', { max: fmtMax }) : ex.message); } finally { setBusy(false); }
   };
 
   const applyPaste = () => {
@@ -182,16 +187,18 @@ function ParcelEditor({ repo, parcel, parcels, onDone }) {
             </div>
             {stats && (
               <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
-                <div className="rounded-xl bg-slate-50 p-3"><p className="text-slate-500">{t('parcels.area')}</p><p className="text-base font-extrabold">{formatHa(stats.area)} {t('parcels.hectares')}</p></div>
+                <div className={`rounded-xl p-3 ${tooBig || tooSmall ? 'bg-rose-50 text-rose-800' : 'bg-slate-50'}`}><p className={tooBig || tooSmall ? '' : 'text-slate-500'}>{t('parcels.area')}</p><p className="text-base font-extrabold">{stats.area < 1000 ? formatHa(stats.area) : Math.round(stats.area).toLocaleString(locale === "en" ? "en-US" : "es-MX")} {t('parcels.hectares')}</p><p className="text-[10px] opacity-70">{t('parcels.maxArea', { max: fmtMax })}</p></div>
                 <div className="rounded-xl bg-slate-50 p-3"><p className="text-slate-500">{t('parcels.centroid')}</p><p className="font-mono font-bold">{stats.c.lat.toFixed(5)}, {stats.c.lon.toFixed(5)}</p></div>
               </div>
             )}
+            {tooBig && <div className="mt-3"><Notice tone="error">{t('parcels.tooBig', { max: fmtMax })}</Notice></div>}
+            {tooSmall && <div className="mt-3"><Notice tone="error">{t('parcels.tooSmall')}</Notice></div>}
             {stats?.crossing && <div className="mt-3"><Notice tone="warn" action={<button type="button" className="btn-ghost" onClick={() => setDraft(orderCorners(valid))}>{t('parcels.order')}</button>}>{t('parcels.crossing')}</Notice></div>}
           </Card>
           {err && <Notice tone="error">{err}</Notice>}
           <div className="flex justify-end gap-2">
             <button type="button" className="btn-ghost" onClick={() => onDone(null)}>{t('common.cancel')}</button>
-            <button className="btn-primary" disabled={busy}>{busy ? t('common.saving') : parcel ? t('parcels.saveChanges') : t('parcels.saveParcel')}</button>
+            <button className="btn-primary" disabled={busy || tooBig || tooSmall}>{busy ? t('common.saving') : parcel ? t('parcels.saveChanges') : t('parcels.saveParcel')}</button>
           </div>
         </div>
       </div>

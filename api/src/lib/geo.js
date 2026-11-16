@@ -35,6 +35,9 @@ function segIntersect(p1, p2, p3, p4) {
   return ((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) && ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0));
 }
 
+/** Tamaño máximo de una parcela (ha). Terrenos mayores se dividen en varias parcelas. */
+export const MAX_PARCEL_HA = 5000;
+
 export function isSelfIntersecting(points) {
   const n = points.length;
   for (let i = 0; i < n; i++) {

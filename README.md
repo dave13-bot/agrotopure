@@ -35,7 +35,7 @@ No es un pronóstico: EONET es un repositorio de referencia general y POWER publ
 - **NASA GIBS** (capas de mapa): HLS 30 m, NDVI MODIS, SMAP L4 humedad superficial y radicular, temperatura MODIS y elevación SRTM / ASTER.
 - **ECOSTRESS** no está publicado en GIBS ni tiene API abierta (requiere cuenta Earthdata/AppEEARS); queda como integración futura.
 
-El mapa base satelital es el mosaico Landsat WELD de NASA GIBS (30 m); el de calles es OpenStreetMap. Solo sirven como referencia visual para dibujar la parcela. La máscara tierra/agua de NASA GIBS (`OSM_Land_Water_Map`) impide guardar parcelas en el océano o en cuerpos de agua.
+Los mapas base (imagen de alta resolución de Esri, Landsat WELD de NASA GIBS y calles de OpenStreetMap) solo sirven como referencia visual para dibujar la parcela; ningún cálculo los usa. Una parcela mide como máximo 5,000 ha. La máscara tierra/agua de NASA GIBS (`OSM_Land_Water_Map`) impide guardar parcelas en el océano o en cuerpos de agua.
 
 ## Cuentas y almacenamiento
 - Inicio de sesión con **GitHub o Microsoft** mediante la autenticación integrada de Azure Static Web Apps. Cada cuenta solo ve sus parcelas, dispositivos y lecturas.
@@ -96,6 +96,7 @@ Este proyecto no está afiliado a la NASA ni respaldado por ella. No usa el logo
 - NASA GIBS / EOSDIS (WMS): HLS S30, MODIS NDVI y temperatura de superficie, SMAP L4, SRTM, ASTER GDEM, Landsat WELD y `OSM_Land_Water_Map` — https://earthdata.nasa.gov/gibs
 
 **Otros datos y referencias**
+- Esri World Imagery, mapa base de alta resolución solo como referencia visual para dibujar linderos — fuente: Esri, Maxar, Earthstar Geographics; uso con atribución según los términos de Esri — https://www.arcgis.com/home/item.html?id=10df2279f9684e4a9f6a7f08febac2a9
 - OpenStreetMap, teselas de calles y datos base de la máscara tierra/agua — © colaboradores de OpenStreetMap, ODbL — https://www.openstreetmap.org/copyright
 - Allen et al. (1998), FAO Irrigation and Drainage Paper 56 (ETo Penman-Monteith, etapas del cultivo, agotamiento permisible).
 - FAO, Irrigation Water Management Training Manual No. 3; FAO Paper 29 Rev. 1 (tolerancia a sales); Kew, Plants of the World Online.

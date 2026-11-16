@@ -55,7 +55,7 @@ export function TeamCredit({ onAbout }) {
   return (
     <span className="mt-3 flex flex-col items-center gap-1.5">
       {onAbout ? <button type="button" onClick={onAbout} className="flex items-center gap-2 rounded-full border border-slate-200 bg-white py-1 pl-1 pr-4 hover:border-gold">{body}</button> : <span className="flex items-center gap-2">{body}</span>}
-      <span>{t('credit.license')} · {t('credit.notNasa')}</span>
+      <span>{t('credit.license')}</span>
     </span>
   );
 }

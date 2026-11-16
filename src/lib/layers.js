@@ -13,9 +13,12 @@ export const NASA_OVERLAYS = [
   { id: 'shade', name: 'Relieve sombreado ASTER GDEM (NASA)', nameEn: 'ASTER GDEM shaded relief (NASA)', layer: 'ASTER_GDEM_Color_Shaded_Relief', opacity: 0.55, legend: 'Relieve sombreado para ver laderas.', legendEn: 'Shaded relief to read hillsides.' }
 ];
 
-// Mapas base. La imagen satelital es el mosaico anual Landsat WELD de NASA GIBS (30 m, sin nubes);
-// las calles son de OpenStreetMap (datos abiertos, ODbL). No se usan mapas base con licencia restringida.
+// Mapas base: solo referencia visual para ubicar y dibujar la parcela; ningún cálculo los usa.
+//  - Esri World Imagery: imagen de alta resolución, necesaria para ver linderos (30 m de Landsat no bastan).
+//    Uso con atribución según los términos de Esri; se cita en README y en "Acerca de nosotros".
+//  - Landsat WELD de NASA GIBS (30 m) y calles de OpenStreetMap (ODbL).
 export const BASE_LAYERS = [
+  { id: 'esri', name: 'Imagen satelital de alta resolución (Esri)', nameEn: 'High-resolution satellite imagery (Esri)', url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', attribution: 'Imagen base: Esri, Maxar, Earthstar Geographics', maxZoom: 19 },
   { id: 'landsat', name: 'Imagen Landsat 30 m (NASA)', nameEn: 'Landsat 30 m imagery (NASA)', wms: 'Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual', attribution: 'NASA GIBS · Landsat WELD', maxZoom: 19 },
   { id: 'osm', name: 'Calles (OpenStreetMap)', nameEn: 'Streets (OpenStreetMap)', url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', attribution: '© OpenStreetMap contributors', maxZoom: 19 }
 ];

@@ -106,6 +106,14 @@ export function enrichDaily(power, latDeg) {
       if (daily[i][k] !== null && daily[i][k] !== undefined) { latest[k] = { value: daily[i][k], date: daily[i].date }; break; }
     }
   }
+  // Valores solares publicados con retraso: se toman de la ventana larga y conservan su fecha.
+  const SOLAR_FIELDS = { CLRSKY_SFC_SW_DWN: 'radClearMJ', ALLSKY_KT: 'kt', ALLSKY_SFC_PAR_TOT: 'par', ALLSKY_SFC_UV_INDEX: 'uv' };
+  for (const [param, field] of Object.entries(SOLAR_FIELDS)) {
+    const hit = power.solarLatest?.[{ radClearMJ: 'radClear', kt: 'kt', par: 'par', uv: 'uv' }[field]];
+    if (!hit) continue;
+    const value = field === 'radClearMJ' ? radToMJ(hit.value, clearUnits) : hit.value;
+    if (!latest[field] || latest[field].date < hit.date) latest[field] = { value, date: hit.date, param };
+  }
   const last7 = daily.map((d) => d.eto).filter((v) => v !== null).slice(-7); // la radiación de POWER se publica con retraso
   const precip30 = daily.slice(-30).map((d) => d.precip).filter((v) => v !== null);
   const rad7 = daily.map((d) => d.radMJ).filter((v) => v !== null && v !== undefined).slice(-7);

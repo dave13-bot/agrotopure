@@ -28,12 +28,18 @@ function power(days) {
     const k = i % 7;
     out.push({
       date: d.toISOString().slice(0, 10), t2m: 18 + k * 0.3, tmax: 26 + k * 0.4, tmin: 10 + k * 0.2, dew: 9,
-      rh: 62 - k, precip: k === 2 ? 6.5 : 0, rad: 19 + k * 0.5, radClear: 24 + k * 0.4, radToa: 33, kt: 0.58,
-      uv: 8.5 + k * 0.2, par: 38 + k, wind: 2.1, windMax: 4.2, ps: 83.9, ts: 21 + k * 0.4,
+      rh: 62 - k, precip: k === 2 ? 6.5 : 0, rad: 19 + k * 0.5, radToa: 33,
+      radClear: i > 12 ? 24 + k * 0.4 : null, wind: 2.1, windMax: 4.2, ps: 83.9, ts: 21 + k * 0.4,
       gwettop: 0.31, gwetroot: i < 8 ? null : 0.42, gwetprof: 0.5
     });
   }
-  return { source: 'NASA POWER Daily API (comunidad AG)', location: {}, elevationM: 1634, units: { ALLSKY_SFC_SW_DWN: 'MJ/m^2/day', CLRSKY_SFC_SW_DWN: 'MJ/m^2/day' }, notes: [], daily: out };
+  return {
+    source: 'NASA POWER Daily API (comunidad AG)', location: {}, elevationM: 1634,
+    units: { ALLSKY_SFC_SW_DWN: 'MJ/m^2/day', CLRSKY_SFC_SW_DWN: 'MJ/m^2/day' }, notes: [],
+    // KT, PAR y UV llegan con meses de retraso, igual que en el servicio real.
+    solarLatest: { radClear: { value: 25.6, date: '2026-10-30' }, kt: { value: 0.6, date: '2026-08-30' }, par: { value: 10.1, date: '2026-08-30' }, uv: { value: 2.4, date: '2026-08-30' } },
+    daily: out
+  };
 }
 const eonet = {
   source: 'NASA EONET v3', disclaimer: 'EONET es un repositorio de metadatos…', radiusKm: 800, days: 30,

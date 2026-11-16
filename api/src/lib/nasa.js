@@ -13,6 +13,7 @@ const DAILY_CORE = ['T2M', 'T2M_MAX', 'T2M_MIN', 'T2MDEW', 'RH2M', 'PRECTOTCORR'
 const DAILY_MIN = ['T2M', 'T2M_MAX', 'T2M_MIN', 'RH2M', 'PRECTOTCORR', 'ALLSKY_SFC_SW_DWN', 'WS2M'];
 // Grupo solar: si POWER rechaza alguno, se reintenta sin él y la app sigue funcionando.
 const DAILY_SOLAR = ['CLRSKY_SFC_SW_DWN', 'TOA_SW_DWN', 'ALLSKY_KT', 'ALLSKY_SFC_PAR_TOT', 'ALLSKY_SFC_UV_INDEX'];
+const SOLAR_SPAN = 240; // días hacia atrás para alcanzar el último dato publicado de KT, PAR y UV
 const CLIM_PARAMS = ['T2M', 'T2M_MAX', 'T2M_MIN', 'T2M_RANGE', 'RH2M', 'PRECTOTCORR', 'ALLSKY_SFC_SW_DWN', 'WS2M', 'GWETTOP', 'GWETROOT'];
 const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
 
@@ -97,18 +98,21 @@ export async function powerDaily(lat, lon, days = 60) {
       core = await getJson(url(DAILY_MIN)); // por si algún parámetro deja de publicarse
     }
 
-    // El grupo solar es opcional: si POWER rechaza un parámetro se reintenta sin los no reconocidos.
+    // El grupo solar se consulta en una ventana más larga: NASA POWER publica el índice de
+    // claridad, el PAR y el UV con bastante más retraso que la radiación incidente.
+    const solarStart = new Date(end.getTime() - (Math.max(span, SOLAR_SPAN) - 1) * 864e5);
+    const solarUrl = (params) => `${POWER}/daily/point?parameters=${params.join(',')}&community=AG&longitude=${lon}&latitude=${lat}&start=${ymd(solarStart)}&end=${ymd(end)}&format=JSON`;
     let solar = null;
     const solarNotes = [];
     try {
-      solar = await getJson(url(DAILY_SOLAR));
+      solar = await getJson(solarUrl(DAILY_SOLAR));
     } catch (e) {
       if (e.upstreamStatus === 422) {
         const rejected = DAILY_SOLAR.filter((p) => String(e.upstreamBody || '').includes(p));
         const keep = DAILY_SOLAR.filter((p) => !rejected.includes(p));
         solarNotes.push(`Parámetros no disponibles en POWER: ${(rejected.length ? rejected : DAILY_SOLAR).join(', ')}.`);
         if (rejected.length && keep.length) {
-          try { solar = await getJson(url(keep)); } catch { /* se continúa sin el grupo solar */ }
+          try { solar = await getJson(solarUrl(keep)); } catch { /* se continúa sin el grupo solar */ }
         }
       } else {
         solarNotes.push('No se pudo consultar el grupo de radiación solar.');
@@ -116,9 +120,20 @@ export async function powerDaily(lat, lon, days = 60) {
     }
 
     const map = parseDaily(core);
-    if (solar) parseDaily(solar, map);
     const units = unitsOf(core);
-    if (solar) unitsOf(solar, units);
+    // Último valor publicado de cada variable solar, con su fecha: puede ser de hace semanas.
+    const solarLatest = {};
+    if (solar) {
+      unitsOf(solar, units);
+      const solarMap = parseDaily(solar);
+      const dates = [...solarMap.keys()].sort();
+      for (const d of dates) {
+        const row = solarMap.get(d);
+        const iso = `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}`;
+        for (const [k, v] of Object.entries(row)) if (v !== null) solarLatest[k] = { value: v, date: iso };
+        if (map.has(d)) Object.assign(map.get(d), row); // sólo se fusiona dentro de la ventana pedida
+      }
+    }
 
     const daily = [...map.entries()]
       .sort(([a], [b]) => a.localeCompare(b))
@@ -131,6 +146,7 @@ export async function powerDaily(lat, lon, days = 60) {
       elevationM: core?.geometry?.coordinates?.[2] ?? null,
       units,
       notes: solarNotes,
+      solarLatest,
       daily
     };
   });

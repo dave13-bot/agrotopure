@@ -50,11 +50,12 @@ test('POWER: calor, UV, radiación, lluvia, viento y racha seca', () => {
   assert.equal(powerAlerts([day(1, { tmax: 39 })], normal, null).find((a) => a.type === 'heat').severity, 3);
   assert.equal(powerAlerts([day(1, { tmax: 36 })], normal, null).find((a) => a.type === 'heat').severity, 2);
 
-  const uv = powerAlerts([day(1, { uv: 11.5 })], normal, null).find((a) => a.type === 'uv');
-  assert.equal(uv.key, 'alerts.uv.index');
-  assert.equal(uv.severity, 3);
   const rad = powerAlerts([day(1, { rad: 27 })], normal, null).find((a) => a.type === 'uv');
-  assert.equal(rad.key, 'alerts.uv.radiation', 'sin UV se usa la radiación');
+  assert.equal(rad.key, 'alerts.uv.radiation');
+  assert.equal(rad.severity, 2);
+  assert.equal(powerAlerts([day(1, { rad: 30 })], normal, null).find((a) => a.type === 'uv').severity, 3);
+  // El índice UV de POWER es media diaria con meses de retraso: no debe generar alerta por sí solo.
+  assert.equal(powerAlerts([day(1, { uv: 11.5, rad: 18 })], normal, null).find((a) => a.type === 'uv'), undefined);
 
   const rain = powerAlerts([day(2), day(1, { precip: 85 })], normal, null).find((a) => a.type === 'rain');
   assert.equal(rain.severity, 3);

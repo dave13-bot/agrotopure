@@ -26,10 +26,22 @@ function power(days) {
   for (let i = days; i >= 4; i--) {
     const d = new Date(Date.now() - i * 864e5);
     const k = i % 7;
-    out.push({ date: d.toISOString().slice(0, 10), t2m: 18 + k * 0.3, tmax: 26 + k * 0.4, tmin: 10 + k * 0.2, dew: 9, rh: 62 - k, precip: k === 2 ? 6.5 : 0, rad: 19 + k * 0.5, wind: 2.1, ps: 83.9, ts: 21 + k * 0.4, gwettop: 0.31, gwetroot: i < 8 ? null : 0.42, gwetprof: 0.5 });
+    out.push({
+      date: d.toISOString().slice(0, 10), t2m: 18 + k * 0.3, tmax: 26 + k * 0.4, tmin: 10 + k * 0.2, dew: 9,
+      rh: 62 - k, precip: k === 2 ? 6.5 : 0, rad: 19 + k * 0.5, radClear: 24 + k * 0.4, radToa: 33, kt: 0.58,
+      uv: 8.5 + k * 0.2, par: 38 + k, wind: 2.1, windMax: 4.2, ps: 83.9, ts: 21 + k * 0.4,
+      gwettop: 0.31, gwetroot: i < 8 ? null : 0.42, gwetprof: 0.5
+    });
   }
-  return { source: 'mock', location: {}, elevationM: 1634, units: { ALLSKY_SFC_SW_DWN: 'MJ/m^2/day' }, daily: out };
+  return { source: 'NASA POWER Daily API (comunidad AG)', location: {}, elevationM: 1634, units: { ALLSKY_SFC_SW_DWN: 'MJ/m^2/day', CLRSKY_SFC_SW_DWN: 'MJ/m^2/day' }, notes: [], daily: out };
 }
+const eonet = {
+  source: 'NASA EONET v3', disclaimer: 'EONET es un repositorio de metadatos…', radiusKm: 800, days: 30,
+  events: [
+    { id: 'EONET_9001', title: 'Tropical Cyclone Prueba', categories: ['severeStorms'], categoryTitles: ['Severe Storms'], sources: [{ id: 'JTWC', url: 'https://example.invalid/a' }], link: 'https://example.invalid/a', distanceKm: 120, lastDate: '2026-11-14T00:00:00Z', magnitudeValue: 65, magnitudeUnit: 'kts' },
+    { id: 'EONET_9002', title: 'Wildfire Prueba', categories: ['wildfires'], categoryTitles: ['Wildfires'], sources: [], link: null, distanceKm: 340, lastDate: '2026-11-09T00:00:00Z', magnitudeValue: null }
+  ]
+};
 const clim = { source: 'mock', period: '2001-2020', months: [[17, 25, 9, 1.0], [18, 27, 9, 0.6], [20, 29, 11, 0.5], [22, 31, 13, 0.6], [23, 31, 15, 2.5], [22, 28, 16, 8.0], [21, 26, 16, 10.5], [21, 26, 16, 10.0], [21, 26, 16, 8.5], [20, 26, 14, 3.5], [19, 26, 11, 1.2], [17, 25, 9, 1.0]].map(([t2m, tmax, tmin, precipDay], i) => ({ month: i + 1, t2m, tmax, tmin, precipDay, rh: 60, rad: 20, wind: 2, gwettop: 0.4, gwetroot: 0.5 })) };
 const modis = { source: 'mock', ndvi: [['2026-09-14', 0.71], ['2026-09-30', 0.66], ['2026-10-16', 0.58], ['2026-11-01', 0.52]].map(([date, value]) => ({ date, value })), lstDayC: [{ date: '2026-11-01', value: 27.4 }], errors: [] };
 
@@ -46,6 +58,7 @@ http.createServer(async (req, res) => {
       if (route === 'nasa/power') return send(res, 200, power(60));
       if (route === 'nasa/climatology') return send(res, 200, clim);
       if (route === 'nasa/modis') return send(res, 200, modis);
+      if (route === 'nasa/eonet') return send(res, 200, eonet);
       if (route === 'ingest') return send(res, 200, await svc.ingest(store, req.headers['x-device-id'], req.headers['x-device-key'], await body(req)));
       const u = user(req);
       if (!u) return send(res, 401, { error: 'unauthenticated' });

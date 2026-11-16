@@ -84,21 +84,36 @@ export function etoHargreavesMonth(m, latDeg) {
 export function enrichDaily(power, latDeg) {
   if (!power?.daily) return { daily: [], latest: {} };
   const radUnits = power.units?.ALLSKY_SFC_SW_DWN || '';
+  const clearUnits = power.units?.CLRSKY_SFC_SW_DWN || radUnits;
+  const toaUnits = power.units?.TOA_SW_DWN || radUnits;
   const daily = power.daily.map((d) => {
     const radMJ = radToMJ(d.rad, radUnits);
-    const row = { ...d, radMJ };
+    const radClearMJ = radToMJ(d.radClear ?? null, clearUnits);
+    const radToaMJ = radToMJ(d.radToa ?? null, toaUnits);
+    // Si POWER no publica el índice de claridad, se deriva de superficie ÷ tope de atmósfera.
+    const kt = d.kt ?? (radMJ !== null && radToaMJ ? round(radMJ / radToaMJ, 2) : null);
+    const row = {
+      ...d, radMJ, radClearMJ, radToaMJ, kt,
+      gwetrootPct: d.gwetroot === null || d.gwetroot === undefined ? null : Math.round(d.gwetroot * 100),
+      gwettopPct: d.gwettop === null || d.gwettop === undefined ? null : Math.round(d.gwettop * 100)
+    };
     row.eto = round(eto(row, latDeg, power.elevationM), 2);
     return row;
   });
   const latest = {};
-  for (const k of ['t2m', 'tmax', 'tmin', 'rh', 'precip', 'radMJ', 'wind', 'ps', 'ts', 'gwettop', 'gwetroot', 'gwetprof', 'eto', 'dew']) {
+  for (const k of ['t2m', 'tmax', 'tmin', 'rh', 'precip', 'radMJ', 'radClearMJ', 'radToaMJ', 'kt', 'uv', 'par', 'wind', 'windMax', 'ps', 'ts', 'gwettop', 'gwetroot', 'gwetprof', 'eto', 'dew']) {
     for (let i = daily.length - 1; i >= 0; i--) {
       if (daily[i][k] !== null && daily[i][k] !== undefined) { latest[k] = { value: daily[i][k], date: daily[i].date }; break; }
     }
   }
   const last7 = daily.map((d) => d.eto).filter((v) => v !== null).slice(-7); // la radiación de POWER se publica con retraso
   const precip30 = daily.slice(-30).map((d) => d.precip).filter((v) => v !== null);
-  return { daily, latest, etoAvg7: round(mean(last7), 2), precip30: round(precip30.reduce((s, x) => s + x, 0), 1) };
+  const rad7 = daily.map((d) => d.radMJ).filter((v) => v !== null && v !== undefined).slice(-7);
+  return {
+    daily, latest, etoAvg7: round(mean(last7), 2),
+    precip30: round(precip30.reduce((s, x) => s + x, 0), 1),
+    radAvg7: round(mean(rad7), 1)
+  };
 }
 
 /** Climatología mensual enriquecida: lluvia y ETo mensual, balance hídrico. */
@@ -116,20 +131,20 @@ export function vulnerabilityCalendar(months) {
   return months.map((m) => {
     const risks = [];
     const deficit = m.balance === null ? null : -m.balance;
-    if (deficit !== null && deficit > 100) risks.push({ id: 'sequia', level: 2, text: `Déficit hídrico alto (${deficit} mm)` });
-    else if (deficit !== null && deficit > 40) risks.push({ id: 'sequia', level: 1, text: `Déficit hídrico (${deficit} mm)` });
-    if (m.precip !== null && m.precip > 280) risks.push({ id: 'erosion', level: 2, text: `Lluvia intensa (${m.precip} mm): erosión y anegamiento` });
-    else if (m.precip !== null && m.precip > 150) risks.push({ id: 'erosion', level: 1, text: `Lluvia alta (${m.precip} mm): proteger suelo desnudo` });
-    if (m.tmin !== null && m.tmin < 0) risks.push({ id: 'helada', level: 2, text: `Riesgo de helada (mínima extrema ${round(m.tmin)} °C)` });
-    else if (m.tmin !== null && m.tmin < 3) risks.push({ id: 'helada', level: 1, text: `Posibles heladas ligeras (mínima extrema ${round(m.tmin)} °C)` });
-    if (m.tmax !== null && m.tmax > 38) risks.push({ id: 'calor', level: 2, text: `Calor extremo (máxima extrema ${round(m.tmax)} °C)` });
-    else if (m.tmax !== null && m.tmax > 35) risks.push({ id: 'calor', level: 1, text: `Golpes de calor (máxima extrema ${round(m.tmax)} °C)` });
+    if (deficit !== null && deficit > 100) risks.push({ id: 'sequia', level: 2, key: 'risk.sequiaHigh', vars: { mm: deficit } });
+    else if (deficit !== null && deficit > 40) risks.push({ id: 'sequia', level: 1, key: 'risk.sequia', vars: { mm: deficit } });
+    if (m.precip !== null && m.precip > 280) risks.push({ id: 'erosion', level: 2, key: 'risk.erosionHigh', vars: { mm: m.precip } });
+    else if (m.precip !== null && m.precip > 150) risks.push({ id: 'erosion', level: 1, key: 'risk.erosion', vars: { mm: m.precip } });
+    if (m.tmin !== null && m.tmin < 0) risks.push({ id: 'helada', level: 2, key: 'risk.heladaHigh', vars: { t: round(m.tmin) } });
+    else if (m.tmin !== null && m.tmin < 3) risks.push({ id: 'helada', level: 1, key: 'risk.helada', vars: { t: round(m.tmin) } });
+    if (m.tmax !== null && m.tmax > 38) risks.push({ id: 'calor', level: 2, key: 'risk.calorHigh', vars: { t: round(m.tmax) } });
+    else if (m.tmax !== null && m.tmax > 35) risks.push({ id: 'calor', level: 1, key: 'risk.calor', vars: { t: round(m.tmax) } });
     const level = risks.reduce((a, r) => Math.max(a, r.level), 0);
     const advice = [];
-    if (risks.some((r) => r.id === 'erosion')) advice.push('Mantener cobertura vegetal o residuos; evitar labranza.');
-    if (risks.some((r) => r.id === 'sequia')) advice.push('Programar riego por sensor a 25 cm; usar acolchado.');
-    if (risks.some((r) => r.id === 'helada')) advice.push('Evitar siembra de cultivos sensibles a helada.');
-    if (risks.some((r) => r.id === 'calor')) advice.push('Evitar floración en este mes para cultivos sensibles.');
+    if (risks.some((r) => r.id === 'erosion')) advice.push({ key: 'risk.adviceErosion' });
+    if (risks.some((r) => r.id === 'sequia')) advice.push({ key: 'risk.adviceSequia' });
+    if (risks.some((r) => r.id === 'helada')) advice.push({ key: 'risk.adviceHelada' });
+    if (risks.some((r) => r.id === 'calor')) advice.push({ key: 'risk.adviceCalor' });
     return { month: m.month, label: m.label, level, risks, advice };
   });
 }
@@ -176,42 +191,44 @@ export function compatibility(plant, ctx) {
     if (plant.perennial) {
       const okCount = months.filter((m) => monthOk(plant, m)).length;
       const s = okCount / 12;
-      factors.push({ id: 'temp', w: 0.4, s });
-      reasons.push(`${okCount}/12 meses dentro de ${plant.temp[0]}-${plant.temp[1]} °C${plant.frostSensitive ? ' sin helada' : ''} (NASA POWER).`);
+      factors.push({ id: 'temp', w: 0.4, s, source: 'NASA POWER' });
+      reasons.push({ key: plant.frostSensitive ? 'compat.perennialMonthsFrost' : 'compat.perennialMonths', vars: { ok: okCount, a: plant.temp[0], b: plant.temp[1] } });
     } else {
       const need = Math.max(1, Math.ceil((plant.cycle?.[0] || 90) / 30.4));
       window = bestWindow(plant, months, allowed, need);
       const s = clamp(window.length / need, 0, 1);
-      factors.push({ id: 'temp', w: 0.4, s });
+      factors.push({ id: 'temp', w: 0.4, s, source: 'NASA POWER' });
       reasons.push(window.length
-        ? `Ventana térmica: ${window.length} mes(es) desde ${MONTHS[window.start - 1]}; el ciclo pide ~${need}.`
-        : `Ningún mes con temperatura media en ${plant.temp[0]}-${plant.temp[1]} °C${plant.frostSensitive ? ' y sin helada' : ''}.`);
+        ? { key: 'compat.window', vars: { len: window.length, monthKey: window.start, need } }
+        : { key: plant.frostSensitive ? 'compat.windowNoneFrost' : 'compat.windowNone', vars: { a: plant.temp[0], b: plant.temp[1] } });
       // Agua: lluvia climatológica en la ventana frente a la demanda de la guía o ETo×0.85.
       if (window.length) {
         const span = Array.from({ length: Math.min(need, window.length) }, (_, k) => months[(window.start - 1 + k) % 12]);
         const rain = span.reduce((acc, m) => acc + (m.precip || 0), 0);
         const demand = plant.water ? (plant.water[0] + plant.water[1]) / 2 : span.reduce((acc, m) => acc + (m.eto || 0), 0) * 0.85;
         const ratio = demand ? rain / demand : 1;
-        factors.push({ id: 'water', w: 0.25, s: clamp(ratio, 0, 1) });
+        factors.push({ id: 'water', w: 0.25, s: clamp(ratio, 0, 1), source: 'NASA POWER' });
         window.rainMm = Math.round(rain);
         window.demandMm = Math.round(demand);
         window.irrigationMm = Math.max(0, Math.round(demand - rain));
-        reasons.push(ratio >= 1 ? `Lluvia esperada (${Math.round(rain)} mm) cubre la demanda (~${Math.round(demand)} mm): viable en temporal.` : `Lluvia esperada ${Math.round(rain)} mm frente a ~${Math.round(demand)} mm: requiere ~${Math.round(demand - rain)} mm de riego.`);
+        reasons.push(ratio >= 1
+          ? { key: 'compat.waterOk', vars: { rain: Math.round(rain), demand: Math.round(demand) } }
+          : { key: 'compat.waterShort', vars: { rain: Math.round(rain), demand: Math.round(demand), irrigation: Math.max(0, Math.round(demand - rain)) } });
       }
     }
   } else {
-    reasons.push('Sin climatología NASA POWER: no se evaluó temperatura ni agua.');
+    reasons.push({ key: 'compat.noClim' });
   }
   if (ctx.ph !== null && ctx.ph !== undefined) {
     const [a, b] = plant.ph;
     const d = ctx.ph < a ? a - ctx.ph : ctx.ph > b ? ctx.ph - b : 0;
-    factors.push({ id: 'ph', w: 0.2, s: clamp(1 - d / 1.0, 0, 1) });
-    reasons.push(d === 0 ? `pH ${ctx.ph} dentro de ${a}-${b}.` : `pH ${ctx.ph} fuera de ${a}-${b} (diferencia ${round(d)}).`);
-  } else reasons.push('pH no medido: agrega lectura de sensor o análisis.');
+    factors.push({ id: 'ph', w: 0.2, s: clamp(1 - d / 1.0, 0, 1), source: 'sensor' });
+    reasons.push(d === 0 ? { key: 'compat.phIn', vars: { ph: ctx.ph, a, b } } : { key: 'compat.phOut', vars: { ph: ctx.ph, a, b, d: round(d) } });
+  } else reasons.push({ key: 'compat.phMissing' });
   if (ctx.ec !== null && ctx.ec !== undefined && plant.cee) {
     const s = ctx.ec <= plant.cee ? 1 : clamp(1 - (ctx.ec - plant.cee) * 0.25, 0, 1);
-    factors.push({ id: 'salinity', w: 0.15, s });
-    reasons.push(ctx.ec <= plant.cee ? `CE ${ctx.ec} dS/m por debajo del umbral ${plant.cee}.` : `CE ${ctx.ec} dS/m supera el umbral ${plant.cee} dS/m: pérdida de rendimiento probable.`);
+    factors.push({ id: 'salinity', w: 0.15, s, source: 'sensor' });
+    reasons.push(ctx.ec <= plant.cee ? { key: 'compat.ecOk', vars: { ec: ctx.ec, cee: plant.cee } } : { key: 'compat.ecOver', vars: { ec: ctx.ec, cee: plant.cee } });
   }
   const wsum = factors.reduce((a, f) => a + f.w, 0);
   const score = wsum ? Math.round((factors.reduce((a, f) => a + f.w * f.s, 0) / wsum) * 100) : null;
@@ -283,9 +300,9 @@ export function rotationStrategies(ctx, currentCrop, priorities = []) {
     const legume = seasonPick(ctx, OI, (p) => p.legumeN && p.cycle[1] <= 200);
     const grass = seasonPick(ctx, PV, (p) => p.cover);
     const defs = [
-      { id: 'A', name: `${currentCrop.name} con suelo desnudo`, seq: [base], note: 'Línea base: sin cobertura entre hileras.' },
-      { id: 'B', name: `${currentCrop.name} + leguminosa entre hileras`, seq: [base, legume].filter(Boolean), note: 'Cobertura viva que aporta nitrógeno y protege el suelo en secas.' },
-      { id: 'C', name: `${currentCrop.name} + gramínea de cobertura`, seq: [base, grass].filter(Boolean), note: 'Raíces fibrosas contra erosión en meses de lluvia intensa.' }
+      { id: 'A', nameKey: 'rot.perBareName', nameVars: { crop: currentCrop.name }, seq: [base], noteKey: 'rot.perBareNote' },
+      { id: 'B', nameKey: 'rot.perLegName', nameVars: { crop: currentCrop.name }, seq: [base, legume].filter(Boolean), noteKey: 'rot.perLegNote' },
+      { id: 'C', nameKey: 'rot.perGrassName', nameVars: { crop: currentCrop.name }, seq: [base, grass].filter(Boolean), noteKey: 'rot.perGrassNote' }
     ];
     for (const d of defs) {
       const m = strategyMetrics(d.seq, calendar, null);
@@ -299,9 +316,9 @@ export function rotationStrategies(ctx, currentCrop, priorities = []) {
     const hortPV = seasonPick(ctx, PV, (p) => ['fruitveg', 'leafveg'].includes(p.cat) && p.mich, prevFamily ? [prevFamily] : []);
     const hortOI = seasonPick(ctx, OI, (p) => (p.legumeN || p.family === 'Brassicaceae'), hortPV ? [hortPV.plant.family] : []);
     const defs = [
-      { id: 'A', name: 'Continuidad optimizada', seq: [pvMain, cover].filter(Boolean), note: 'Mantiene el cultivo principal en temporal y deja cobertura en secas.' },
-      { id: 'B', name: 'Regeneración con leguminosa', seq: [pvMain, legume].filter(Boolean), note: 'Fija nitrógeno y rompe el ciclo de plagas del cultivo principal.' },
-      { id: 'C', name: 'Diversificación de mayor valor', seq: [hortPV, hortOI].filter(Boolean), note: 'Hortaliza en temporal y cultivo de otra familia en secas.' }
+      { id: 'A', nameKey: 'rot.contName', seq: [pvMain, cover].filter(Boolean), noteKey: 'rot.contNote' },
+      { id: 'B', nameKey: 'rot.legName', seq: [pvMain, legume].filter(Boolean), noteKey: 'rot.legNote' },
+      { id: 'C', nameKey: 'rot.divName', seq: [hortPV, hortOI].filter(Boolean), noteKey: 'rot.divNote' }
     ];
     for (const d of defs) {
       if (!d.seq.length) continue;
@@ -356,9 +373,9 @@ export function fusion({ sensor, nasa, texture, crop, readings }) {
   const tx = textureOf(texture);
   const vwc = sensor.moisture25?.value ?? null;
   const out = { texture: tx, available: false, insights: [], method: [] };
-  out.method.push('Δ = (humedad volumétrica a 25 cm ÷ saturación típica de la textura) − GWETROOT de NASA POWER.');
+  out.methodKey = 'fusion.method';
   if (vwc === null) {
-    out.insights.push({ level: 'info', title: 'Sin lectura de humedad a 25 cm', text: 'Conecta un ESP32/Raspberry Pi o captura una lectura manual para activar el motor Δ.' });
+    out.insights.push({ level: 'info', titleKey: 'fusion.noSensorTitle', textKey: 'fusion.noSensorText' });
     return out;
   }
   out.available = true;
@@ -378,30 +395,43 @@ export function fusion({ sensor, nasa, texture, crop, readings }) {
   const physSlope = etoDay !== null ? -(etoDay * 0.85) / 300 * 100 : null; // mm/día sobre 300 mm de zona radicular → %VWC/día
   const useTrend = tr.slope !== null && tr.r2 !== null && tr.r2 >= 0.3;
   const slope = useTrend ? tr.slope : physSlope;
-  out.prediction = { slope: round(slope, 2), basis: useTrend ? `tendencia de ${tr.n} días de sensor (r² ${tr.r2})` : etoDay !== null ? `consumo estimado ETo ${etoDay} mm/día × Kc 0.85 (NASA POWER)` : 'sin datos suficientes' };
+  out.prediction = {
+    slope: round(slope, 2),
+    basisKey: useTrend ? 'pred.trendBasis' : etoDay !== null ? 'pred.etoBasis' : 'pred.noBasis',
+    basisVars: useTrend ? { n: tr.n, r2: tr.r2 } : etoDay !== null ? { eto: etoDay } : {}
+  };
   if (slope !== null && slope < 0 && vwc > triggerVwc) out.prediction.daysToIrrigate = Math.round((vwc - triggerVwc) / -slope);
   else if (vwc <= triggerVwc) out.prediction.daysToIrrigate = 0;
 
   // Interpretación.
   if (vwc <= triggerVwc) {
-    out.insights.push({ level: 'alert', title: 'Regar ahora', text: `Humedad a 25 cm ${vwc}% por debajo del umbral ${round(triggerVwc)}% (50% de agua disponible, suelo ${tx.label.toLowerCase()}).` });
+    out.insights.push({ level: 'alert', titleKey: 'fusion.irrigateTitle', textKey: 'fusion.irrigateText', textVars: { vwc, trigger: round(triggerVwc), textureKey: texture || 'desconocido' } });
   } else if (out.prediction.daysToIrrigate !== undefined) {
     const d = out.prediction.daysToIrrigate;
     const saved = etoDay !== null ? Math.round(d * etoDay * 0.85) : null;
-    out.insights.push({ level: 'ok', title: `No regar: reserva para ~${d} día(s)`, text: `Humedad a 25 cm ${vwc}% sobre el umbral ${round(triggerVwc)}%.${saved ? ` Riego evitable estimado: ${saved} mm (≈ ${saved * 10} m³/ha).` : ''}` });
+    out.insights.push({
+      level: 'ok', titleKey: 'fusion.holdTitle', titleVars: { days: d },
+      textKey: 'fusion.holdText', textVars: { vwc, trigger: round(triggerVwc) },
+      extraKey: saved ? 'fusion.holdSaved' : null, extraVars: saved ? { mm: saved, m3: saved * 10 } : null
+    });
     out.savedMm = saved;
   }
   if (out.deltaRoot !== undefined) {
-    if (out.deltaRoot >= 0.15) out.insights.push({ level: 'ok', title: `Δ +${out.deltaRoot}: humedad oculta bajo superficie`, text: 'El sensor detecta más agua en la zona radicular que el modelo satelital (9-50 km). El riego programado por satélite sobrestimaría la necesidad.' });
-    else if (out.deltaRoot <= -0.15) out.insights.push({ level: 'warn', title: `Δ ${out.deltaRoot}: parcela más seca que la región`, text: 'La parcela pierde agua más rápido que su entorno: revisar compactación, pendiente o fugas de riego.' });
-    else out.insights.push({ level: 'info', title: `Δ ${out.deltaRoot}: sensor y satélite coinciden`, text: 'La estimación regional representa bien esta parcela.' });
+    if (out.deltaRoot >= 0.15) out.insights.push({ level: 'ok', titleKey: 'fusion.deltaHighTitle', titleVars: { d: out.deltaRoot }, textKey: 'fusion.deltaHighText' });
+    else if (out.deltaRoot <= -0.15) out.insights.push({ level: 'warn', titleKey: 'fusion.deltaLowTitle', titleVars: { d: out.deltaRoot }, textKey: 'fusion.deltaLowText' });
+    else out.insights.push({ level: 'info', titleKey: 'fusion.deltaOkTitle', titleVars: { d: out.deltaRoot }, textKey: 'fusion.deltaOkText' });
   }
   // Ventana de siembra oculta.
   const rootT = sensor.rootTempC?.value ?? null;
   if (gTop !== null && gTop < 0.45 && out.aw >= 0.6) {
     const tOk = crop && rootT !== null ? rootT >= crop.temp[0] - 3 : null;
     out.hiddenWindow = true;
-    out.insights.push({ level: 'ok', title: 'Ventana de siembra oculta', text: `La superficie se ve seca para el satélite (GWETTOP ${gTop}), pero a 25 cm hay ${Math.round(out.aw * 100)}% de agua disponible.${tOk === false ? ` La temperatura radicular (${rootT} °C) aún es baja para ${crop.name}.` : tOk ? ` Temperatura radicular ${rootT} °C adecuada para ${crop.name}.` : ''}` });
+    out.insights.push({
+      level: 'ok', titleKey: 'fusion.hiddenTitle',
+      textKey: 'fusion.hiddenText', textVars: { gtop: gTop, aw: Math.round(out.aw * 100) },
+      extraKey: tOk === false ? 'fusion.hiddenTempLow' : tOk ? 'fusion.hiddenTempOk' : null,
+      extraVars: tOk === null ? null : { t: rootT, crop: crop.name }
+    });
   }
   if (rootT !== null && nasa.ts?.value !== undefined) out.deltaTemp = round(rootT - nasa.ts.value, 1);
   return out;

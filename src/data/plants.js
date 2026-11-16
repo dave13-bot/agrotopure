@@ -5,6 +5,8 @@
 // Los registros marcados con added:true NO están en la guía de 68 y se agregaron por ser cultivos
 // clave de Michoacán; deben validarse localmente.
 
+import { PLANTS_EN, CATEGORIES_EN, SOURCES_EN } from './plants.en.js';
+
 export const CATEGORIES = {
   cereal: 'Cereales y pseudocereales',
   legume: 'Leguminosas de grano y forraje',
@@ -122,10 +124,21 @@ export const PLANTS = [
 export const GUIDE_COUNT = PLANTS.filter((x) => !x.added).length;
 export const plantById = (id) => PLANTS.find((x) => x.id === id);
 
+/** Mismo cultivo con sus textos en el idioma activo. */
+export function localized(plant, locale) {
+  if (!plant || locale !== 'en') return plant;
+  const e = PLANTS_EN[plant.id];
+  return e ? { ...plant, ...e, nameEs: plant.name } : plant;
+}
+export const localizedPlants = (locale) => (locale === 'en' ? PLANTS.map((p) => localized(p, 'en')) : PLANTS);
+export const categoryLabel = (cat, locale) => (locale === 'en' ? CATEGORIES_EN[cat] : CATEGORIES[cat]);
+export const localizedSources = (locale) => SOURCES.map((s) => (locale === 'en' && SOURCES_EN[s.id] ? { ...s, text: SOURCES_EN[s.id] } : s));
+
 /** Busca un cultivo por nombre escrito libremente (p. ej. "maíz", "Tomate"). */
 export function findPlantByName(name) {
   if (!name) return null;
   const n = norm(name);
-  return PLANTS.find((x) => norm(x.name).split('/').map((s) => s.trim()).some((s) => s === n || s.startsWith(n) || n.startsWith(s))) || null;
+  const hit = (label) => norm(label).split('/').map((s) => s.trim()).some((s) => s === n || s.startsWith(n) || n.startsWith(s));
+  return PLANTS.find((x) => hit(x.name) || (PLANTS_EN[x.id] && hit(PLANTS_EN[x.id].name))) || null;
 }
 export const norm = (s) => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();

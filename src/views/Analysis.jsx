@@ -125,6 +125,13 @@ function SolarCard({ data }) {
   const L = data.latest || {};
   const rad = L.radMJ?.value ?? null;
   const kt = L.kt?.value ?? null;
+  // Si el dato no es de los últimos días, se muestra su fecha en lugar de darlo por actual.
+  const asOf = (entry, param) => {
+    if (!entry?.date) return param;
+    const days = (Date.now() - Date.parse(`${entry.date}T12:00:00Z`)) / 864e5;
+    return days > 10 ? t('analysis.solarAsOf', { param, date: fmt.date(entry.date, { day: 'numeric', month: 'short', year: 'numeric' }) }) : param;
+  };
+  const stale = ['radClearMJ', 'kt', 'par', 'uv'].some((k) => L[k]?.date && (Date.now() - Date.parse(`${L[k].date}T12:00:00Z`)) / 864e5 > 10);
   const reading = rad === null ? null : rad >= 24 ? 'solarReadHigh' : rad >= 14 ? 'solarReadMid' : 'solarReadLow';
   const series = [{ key: 'radMJ', name: t('chart.radiation'), color: '#f59e0b', type: 'line' }];
   if (data.daily?.some((d) => d.radClearMJ !== null && d.radClearMJ !== undefined)) series.push({ key: 'radClearMJ', name: t('chart.radiationClear'), color: '#fcd34d', type: 'line' });
@@ -141,11 +148,11 @@ function SolarCard({ data }) {
             <StatGrid cols="grid-cols-2 sm:grid-cols-3 lg:grid-cols-6" items={[
               { label: t('analysis.solarAll'), value: fmt.num(rad, 1), unit: 'MJ/m²', hint: t('analysis.solarAllHint'), tone: 'text-amber-700', big: true },
               { label: t('analysis.solarKwh'), value: fmt.num(rad / 3.6, 2), unit: 'kWh/m²', hint: t('analysis.solarKwhHint') },
-              { label: t('analysis.solarClear'), value: fmt.num(L.radClearMJ?.value, 1), unit: 'MJ/m²', hint: t('analysis.solarClearHint') },
-              { label: t('analysis.solarKt'), value: fmt.num(kt, 2), hint: t('analysis.solarKtHint') },
+              { label: t('analysis.solarClear'), value: fmt.num(L.radClearMJ?.value, 1), unit: 'MJ/m²', hint: asOf(L.radClearMJ, t('analysis.solarClearHint')) },
+              { label: t('analysis.solarKt'), value: fmt.num(kt, 2), hint: asOf(L.kt, t('analysis.solarKtHint')) },
               { label: t('analysis.solarCloud'), value: kt === null ? null : `${Math.round((1 - kt) * 100)}`, unit: '%', hint: t('analysis.solarCloudHint') },
-              { label: t('analysis.solarUv'), value: fmt.num(L.uv?.value, 1), hint: t('analysis.solarUvHint') },
-              { label: t('analysis.solarPar'), value: fmt.num(L.par?.value, 1), hint: t('analysis.solarParHint') }
+              { label: t('analysis.solarUv'), value: fmt.num(L.uv?.value, 1), hint: asOf(L.uv, t('analysis.solarUvHint')) },
+              { label: t('analysis.solarPar'), value: fmt.num(L.par?.value, 1), unit: 'MJ/m²', hint: asOf(L.par, t('analysis.solarParHint')) }
             ]} />
           </div>
           {reading && <div className="mt-4"><Notice tone={reading === 'solarReadHigh' ? 'warn' : 'info'}>{t(`analysis.${reading}`)}</Notice></div>}
@@ -153,6 +160,7 @@ function SolarCard({ data }) {
             <p className="mb-1 text-sm font-extrabold">{t('analysis.solarChart')}</p>
             <TimeChart data={data.daily} series={series} defaultRange={30} height={240} />
           </div>
+          {stale && <p className="mt-2 text-[11px] text-slate-400">{t('analysis.solarLagNote')}</p>}
           {data.power?.notes?.length > 0 && <p className="mt-2 text-[11px] text-slate-400">{data.power.notes.join(' ')}</p>}
         </>
       )}

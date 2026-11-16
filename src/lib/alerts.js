@@ -88,19 +88,11 @@ export function powerAlerts(daily, months, crop) {
     }
   }
 
-  // --- Radiación solar y UV ---
-  const uvs = lastValid(daily, 'uv', 7);
+  // --- Radiación solar ---
+  // Se usa la radiación incidente, que POWER publica con pocos días de retraso. El índice UV
+  // del mismo servicio es una media diaria que llega con meses de rezago, así que no genera alerta.
   const rads = lastValid(daily, 'rad', 7);
-  if (uvs.length) {
-    const peak = uvs.reduce((a, b) => (b.uv > a.uv ? b : a));
-    if (peak.uv >= 8) {
-      out.push({
-        id: 'power:uv', type: 'uv', source: 'NASA POWER', date: peak.date,
-        severity: peak.uv >= 11 ? SEV.high : SEV.medium,
-        key: 'alerts.uv.index', vars: { uv: round(peak.uv) }
-      });
-    }
-  } else if (rads.length) {
+  if (rads.length) {
     const peak = rads.reduce((a, b) => (b.rad > a.rad ? b : a));
     if (peak.rad >= 26) {
       out.push({

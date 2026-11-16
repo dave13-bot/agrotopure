@@ -1,5 +1,5 @@
 [Unit]
-Description=AGROTOPURE nodo de sensores de suelo
+Description=AGRO-TOPURE nodo de sensores de suelo
 After=network-online.target
 Wants=network-online.target
 

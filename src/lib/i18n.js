@@ -1,11 +1,12 @@
 // Español / inglés. Las cadenas se escriben anidadas y se aplanan a claves "a.b.c".
 import { createContext, useContext } from 'react';
+import { extraEs, extraEn } from './i18n.extra.js';
 
 export const LOCALES = { es: 'Español', en: 'English' };
 export const LOCALE_TAG = { es: 'es-MX', en: 'en-US' };
 
 const es = {
-  app: { tagline: 'Inteligencia agrícola con datos de la NASA', name: 'AGROTOPURE' },
+  app: { tagline: 'Inteligencia agrícola con datos de la NASA', name: 'AGRO-TOPURE' },
   nav: { home: 'Inicio', parcels: 'Parcelas', analysis: 'Análisis', sensors: 'Sensores', plants: 'Plantas', account: 'Cuenta', main: 'Menú principal', mobile: 'Menú principal móvil' },
   common: {
     save: 'Guardar', cancel: 'Cancelar', delete: 'Eliminar', edit: 'Editar', add: 'Agregar', retry: 'Reintentar',
@@ -19,7 +20,7 @@ const es = {
   welcome: {
     eyebrow: 'NASA Space Apps 2026 · Field Shift',
     title: 'Decide tu siembra con los datos de la NASA.',
-    lead: 'AGROTOPURE convierte la telemetría satelital de la NASA (POWER, MODIS, SMAP, HLS y SRTM) en decisiones de campo: cuándo sembrar, cuánto regar y qué rotación conviene a tu parcela. Con el satélite basta para empezar; los sensores de suelo son un extra opcional.',
+    lead: 'AGRO-TOPURE convierte la telemetría satelital de la NASA (POWER, MODIS, SMAP, HLS y SRTM) en decisiones de campo: cuándo sembrar, cuánto regar y qué rotación conviene a tu parcela. Con el satélite basta para empezar; los sensores de suelo son un extra opcional.',
     github: 'Entrar con GitHub', microsoft: 'Entrar con Microsoft',
     guest: 'Probar sin cuenta (solo este dispositivo)',
     offline: 'El servidor no está disponible en este momento; puedes probar sin cuenta.',
@@ -30,7 +31,7 @@ const es = {
     extra: 'Maíz, aguacate, berries, trigo y hortalizas: compara tres estrategias de rotación según tus prioridades.',
     satFirst: 'Satélite primero', satFirstText: 'Todo el análisis —siembra, riego, rotación y alertas— funciona solo con datos de la NASA. Si además tienes sensores en el suelo, el análisis fino los suma para afinar el riego.'
   },
-  onboarding: { step: 'Paso 1 de 2 · Tu perfil', title: 'Bienvenido a AGROTOPURE', lead: 'Con estos datos personalizamos las estrategias de rotación. Después registrarás tu primera parcela.', submit: 'Crear mi perfil' },
+  onboarding: { step: 'Paso 1 de 2 · Tu perfil', title: 'Bienvenido a AGRO-TOPURE', lead: 'Con estos datos personalizamos las estrategias de rotación. Después registrarás tu primera parcela.', submit: 'Crear mi perfil' },
   profile: {
     name: 'Nombre', namePh: 'Tu nombre o el de tu rancho', region: 'Municipio / región', regionPh: 'Ej. Uruapan, Michoacán',
     priorities: 'Tus prioridades (pesan doble en la rotación)', language: 'Idioma', save: 'Guardar perfil', saved: 'Perfil guardado.'
@@ -194,7 +195,7 @@ const es = {
   sensors: {
     eyebrow: 'Análisis fino · sensores en piso', manual: 'Lectura manual', device: 'Dispositivo',
     devicesTitle: 'ESP32 y Raspberry Pi de esta parcela',
-    devicesLead: 'Cada dispositivo tiene su propia llave. Lee los sensores automáticamente y envía lecturas a AGROTOPURE, que arma el histórico y las predicciones.',
+    devicesLead: 'Cada dispositivo tiene su propia llave. Lee los sensores automáticamente y envía lecturas a AGRO-TOPURE, que arma el histórico y las predicciones.',
     noDevices: 'Aún no hay dispositivos. Agrega uno para obtener su ID y llave.',
     noCloud: 'Los dispositivos requieren una cuenta con almacenamiento en la nube.',
     firmware: 'Ver firmware', online: 'En línea', offline: 'Sin señal', neverSeen: 'Nunca conectado',
@@ -245,13 +246,13 @@ const es = {
     water: 'Agua estacional', rotation: 'Rotación', soilCare: 'Suelo y cuidados', agroNote: 'Nota agronómica',
     cycleDays: '{a} – {b} días (orientativo)', fixesN: 'Leguminosa: aporta nitrógeno al siguiente cultivo. ',
     coverUse: 'Útil como cobertura contra erosión. ', avoidFamily: 'Evitar repetir la familia {family} en ciclos seguidos.',
-    fitnessIn: 'Aptitud en {parcel}', addedNote: 'Registro agregado por AGROTOPURE (no forma parte de la guía de 68 cultivos); valida los rangos localmente.',
+    fitnessIn: 'Aptitud en {parcel}', addedNote: 'Registro agregado por AGRO-TOPURE (no forma parte de la guía de 68 cultivos); valida los rangos localmente.',
     generalRange: 'Rango general*', fixesNTag: 'Fija N', noCee: 'CEe s/d'
   },
   account: {
     eyebrow: 'Mi cuenta', profile: 'Perfil', lead: 'Tus prioridades ajustan el puntaje de las estrategias de rotación.',
     session: 'Sesión', connectedAs: 'Conectado con {provider} como {user}.', guest: 'Sin cuenta (modo invitado).',
-    cloudOn: 'Datos guardados en la nube de AGROTOPURE.', cloudOff: 'Datos guardados solo en este navegador.',
+    cloudOn: 'Datos guardados en la nube de AGRO-TOPURE.', cloudOff: 'Datos guardados solo en este navegador.',
     stats: '{parcels} parcela(s) · {devices} dispositivo(s)', since: ' · desde {date}',
     logout: 'Cerrar sesión', exitGuest: 'Salir del modo invitado',
     deleteTitle: 'Eliminar cuenta', deleteLead: 'Borra tu perfil, parcelas, dispositivos y lecturas.',
@@ -268,10 +269,10 @@ const es = {
     normalRain: 'Lluvia normal (mm/mes)', etoMonth: 'ETo Hargreaves (mm/mes)', ndvi: 'NDVI'
   },
   status: {
-    localTitleUser: 'La nube aún no está configurada', localTitleGuest: 'Estás usando AGROTOPURE sin cuenta',
+    localTitleUser: 'La nube aún no está configurada', localTitleGuest: 'Estás usando AGRO-TOPURE sin cuenta',
     localUser: 'Tu sesión es válida, pero el servidor no tiene base de datos conectada: por ahora tus parcelas se guardan solo en este navegador y los dispositivos ESP32/Raspberry Pi no pueden enviar lecturas.',
     localGuest: 'Tus parcelas se guardan solo en este navegador. Crea una cuenta para guardarlas en la nube, usarlas desde el celular y conectar sensores.',
-    login: 'Iniciar sesión', loadError: 'No se pudieron cargar tus datos', openingAccount: 'Abriendo tu cuenta…', loadingApp: 'Cargando AGROTOPURE…'
+    login: 'Iniciar sesión', loadError: 'No se pudieron cargar tus datos', openingAccount: 'Abriendo tu cuenta…', loadingApp: 'Cargando AGRO-TOPURE…'
   },
   compat: {
     perennialMonths: '{ok}/12 meses dentro de {a}-{b} °C (NASA POWER).',
@@ -334,11 +335,11 @@ const es = {
   textures: { arenoso: 'Arenoso', 'franco-arenoso': 'Franco-arenoso', franco: 'Franco', 'franco-limoso': 'Franco-limoso', 'franco-arcilloso': 'Franco-arcilloso', arcilloso: 'Arcilloso', desconocido: 'Desconocida (se usa franco)' },
   categories: { cereal: 'Cereales y pseudocereales', legume: 'Leguminosas de grano y forraje', root: 'Raíces, tubérculos y bulbos', industrial: 'Oleaginosas, textiles e industriales', fruitveg: 'Hortalizas de fruto y cucurbitáceas', leafveg: 'Hortalizas de hoja, aromáticas y rizomas', fruit: 'Frutales y berries de Michoacán' },
   months: { 1: 'Ene', 2: 'Feb', 3: 'Mar', 4: 'Abr', 5: 'May', 6: 'Jun', 7: 'Jul', 8: 'Ago', 9: 'Sep', 10: 'Oct', 11: 'Nov', 12: 'Dic' },
-  footer: 'AGROTOPURE · NASA Space Apps 2026 · Reto Field Shift · Datos: NASA POWER, MODIS (ORNL DAAC), EONET, SMAP, HLS y SRTM (GIBS)'
+  footer: 'AGRO-TOPURE · NASA Space Apps 2026 · Reto Field Shift · Datos: NASA POWER, MODIS (ORNL DAAC), EONET, SMAP, HLS y SRTM (GIBS)'
 };
 
 const en = {
-  app: { tagline: 'Farm intelligence powered by NASA data', name: 'AGROTOPURE' },
+  app: { tagline: 'Farm intelligence powered by NASA data', name: 'AGRO-TOPURE' },
   nav: { home: 'Home', parcels: 'Fields', analysis: 'Analysis', sensors: 'Sensors', plants: 'Crops', account: 'Account', main: 'Main menu', mobile: 'Mobile main menu' },
   common: {
     save: 'Save', cancel: 'Cancel', delete: 'Delete', edit: 'Edit', add: 'Add', retry: 'Retry',
@@ -352,7 +353,7 @@ const en = {
   welcome: {
     eyebrow: 'NASA Space Apps 2026 · Field Shift',
     title: 'Decide your planting with NASA data.',
-    lead: 'AGROTOPURE turns NASA satellite telemetry (POWER, MODIS, SMAP, HLS and SRTM) into field decisions: when to sow, how much to irrigate and which rotation fits your field. Satellite data alone is enough to start; soil sensors are an optional extra.',
+    lead: 'AGRO-TOPURE turns NASA satellite telemetry (POWER, MODIS, SMAP, HLS and SRTM) into field decisions: when to sow, how much to irrigate and which rotation fits your field. Satellite data alone is enough to start; soil sensors are an optional extra.',
     github: 'Sign in with GitHub', microsoft: 'Sign in with Microsoft',
     guest: 'Try without an account (this device only)',
     offline: 'The server is unavailable right now; you can still try without an account.',
@@ -363,7 +364,7 @@ const en = {
     extra: 'Maize, avocado, berries, wheat and vegetables: compare three rotation strategies against your priorities.',
     satFirst: 'Satellite first', satFirstText: 'The whole analysis — sowing, irrigation, rotation and alerts — runs on NASA data alone. If you also have soil sensors, fine analysis adds them to sharpen irrigation.'
   },
-  onboarding: { step: 'Step 1 of 2 · Your profile', title: 'Welcome to AGROTOPURE', lead: 'We use this to tailor rotation strategies. Next you will register your first field.', submit: 'Create my profile' },
+  onboarding: { step: 'Step 1 of 2 · Your profile', title: 'Welcome to AGRO-TOPURE', lead: 'We use this to tailor rotation strategies. Next you will register your first field.', submit: 'Create my profile' },
   profile: {
     name: 'Name', namePh: 'Your name or your farm’s', region: 'Municipality / region', regionPh: 'e.g. Uruapan, Michoacán',
     priorities: 'Your priorities (double weight in rotation)', language: 'Language', save: 'Save profile', saved: 'Profile saved.'
@@ -527,7 +528,7 @@ const en = {
   sensors: {
     eyebrow: 'Fine analysis · ground sensors', manual: 'Manual reading', device: 'Device',
     devicesTitle: 'ESP32 and Raspberry Pi on this field',
-    devicesLead: 'Each device has its own key. It reads the sensors automatically and sends readings to AGROTOPURE, which builds the history and predictions.',
+    devicesLead: 'Each device has its own key. It reads the sensors automatically and sends readings to AGRO-TOPURE, which builds the history and predictions.',
     noDevices: 'No devices yet. Add one to get its ID and key.',
     noCloud: 'Devices require an account with cloud storage.',
     firmware: 'View firmware', online: 'Online', offline: 'No signal', neverSeen: 'Never connected',
@@ -578,13 +579,13 @@ const en = {
     water: 'Seasonal water', rotation: 'Rotation', soilCare: 'Soil and care', agroNote: 'Agronomic note',
     cycleDays: '{a} – {b} days (indicative)', fixesN: 'Legume: supplies nitrogen to the next crop. ',
     coverUse: 'Useful as cover against erosion. ', avoidFamily: 'Avoid repeating the {family} family in consecutive cycles.',
-    fitnessIn: 'Suitability on {parcel}', addedNote: 'Record added by AGROTOPURE (not part of the 68-crop guide); validate the ranges locally.',
+    fitnessIn: 'Suitability on {parcel}', addedNote: 'Record added by AGRO-TOPURE (not part of the 68-crop guide); validate the ranges locally.',
     generalRange: 'General range*', fixesNTag: 'Fixes N', noCee: 'ECe n/a'
   },
   account: {
     eyebrow: 'My account', profile: 'Profile', lead: 'Your priorities tune the score of each rotation strategy.',
     session: 'Session', connectedAs: 'Signed in with {provider} as {user}.', guest: 'No account (guest mode).',
-    cloudOn: 'Data stored in the AGROTOPURE cloud.', cloudOff: 'Data stored only in this browser.',
+    cloudOn: 'Data stored in the AGRO-TOPURE cloud.', cloudOff: 'Data stored only in this browser.',
     stats: '{parcels} field(s) · {devices} device(s)', since: ' · since {date}',
     logout: 'Sign out', exitGuest: 'Leave guest mode',
     deleteTitle: 'Delete account', deleteLead: 'Deletes your profile, fields, devices and readings.',
@@ -601,10 +602,10 @@ const en = {
     normalRain: 'Normal rain (mm/month)', etoMonth: 'Hargreaves ETo (mm/month)', ndvi: 'NDVI'
   },
   status: {
-    localTitleUser: 'The cloud is not configured yet', localTitleGuest: 'You are using AGROTOPURE without an account',
+    localTitleUser: 'The cloud is not configured yet', localTitleGuest: 'You are using AGRO-TOPURE without an account',
     localUser: 'Your session is valid, but the server has no database connected: for now your fields are stored only in this browser and ESP32/Raspberry Pi devices cannot send readings.',
     localGuest: 'Your fields are stored only in this browser. Create an account to keep them in the cloud, use them from your phone and connect sensors.',
-    login: 'Sign in', loadError: 'Your data could not be loaded', openingAccount: 'Opening your account…', loadingApp: 'Loading AGROTOPURE…'
+    login: 'Sign in', loadError: 'Your data could not be loaded', openingAccount: 'Opening your account…', loadingApp: 'Loading AGRO-TOPURE…'
   },
   compat: {
     perennialMonths: '{ok}/12 months within {a}-{b} °C (NASA POWER).',
@@ -667,7 +668,7 @@ const en = {
   textures: { arenoso: 'Sandy', 'franco-arenoso': 'Sandy loam', franco: 'Loam', 'franco-limoso': 'Silt loam', 'franco-arcilloso': 'Clay loam', arcilloso: 'Clay', desconocido: 'Unknown (loam assumed)' },
   categories: { cereal: 'Cereals and pseudocereals', legume: 'Grain and forage legumes', root: 'Roots, tubers and bulbs', industrial: 'Oilseed, fibre and industrial crops', fruitveg: 'Fruiting vegetables and cucurbits', leafveg: 'Leafy and aromatic vegetables, rhizomes', fruit: 'Michoacán fruits and berries' },
   months: { 1: 'Jan', 2: 'Feb', 3: 'Mar', 4: 'Apr', 5: 'May', 6: 'Jun', 7: 'Jul', 8: 'Aug', 9: 'Sep', 10: 'Oct', 11: 'Nov', 12: 'Dec' },
-  footer: 'AGROTOPURE · NASA Space Apps 2026 · Field Shift challenge · Data: NASA POWER, MODIS (ORNL DAAC), EONET, SMAP, HLS and SRTM (GIBS)'
+  footer: 'AGRO-TOPURE · NASA Space Apps 2026 · Field Shift challenge · Data: NASA POWER, MODIS (ORNL DAAC), EONET, SMAP, HLS and SRTM (GIBS)'
 };
 
 function flatten(obj, prefix = '', out = {}) {
@@ -679,7 +680,7 @@ function flatten(obj, prefix = '', out = {}) {
   return out;
 }
 
-const DICT = { es: flatten(es), en: flatten(en) };
+const DICT = { es: { ...flatten(es), ...flatten(extraEs) }, en: { ...flatten(en), ...flatten(extraEn) } };
 
 export function translate(locale, key, vars) {
   const table = DICT[locale] || DICT.es;

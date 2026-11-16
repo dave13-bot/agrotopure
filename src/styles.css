@@ -8,7 +8,8 @@ button, input, select, textarea { font: inherit; }
 button { -webkit-tap-highlight-color: transparent; }
 
 @layer components {
-  .brand-gradient { background: linear-gradient(135deg, #0d4a2b 0%, #176b40 100%); }
+  /* AGRO (verde de campo) → TOPURE (azul marino de Tesla Legacy). El dorado del emblema es el acento. */
+  .brand-gradient { background: linear-gradient(135deg, #0d4a2b 0%, #15603c 48%, #0f2a4a 100%); }
   .soil-gradient { background: linear-gradient(145deg, #235838 0%, #528458 100%); }
   .card { @apply rounded-3xl bg-white shadow-card; }
   .btn { @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-xl px-4 text-sm font-bold transition disabled:cursor-not-allowed disabled:opacity-50; }

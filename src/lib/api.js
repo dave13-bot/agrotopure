@@ -86,7 +86,10 @@ export function localRepo(namespace) {
     async getProfile() {
       const p = db().profile;
       if (!p) return null;
-      return { locale: 'es', fineAnalysis: false, alertTypes: [...ALERT_TYPES], ...p };
+      const out = { locale: 'es', fineAnalysis: false, alertTypes: [...ALERT_TYPES], ...p };
+      // Perfiles guardados antes de existir la alerta de salud del cultivo la reciben activada.
+      if (p.alertsV !== 2 && !out.alertTypes.includes('health')) out.alertTypes = [...out.alertTypes, 'health'];
+      return out;
     },
     async saveProfile(p) {
       if (!p.name?.trim()) throw new ApiError(400, 'Escribe tu nombre.');
@@ -97,7 +100,7 @@ export function localRepo(namespace) {
         priorities: [...new Set((p.priorities || []).filter((x) => PRIORITIES.includes(x)))],
         locale: LOCALES.includes(p.locale) ? p.locale : 'es',
         fineAnalysis: p.fineAnalysis === true,
-        alertTypes: Array.isArray(p.alertTypes) ? [...new Set(p.alertTypes.filter((x) => ALERT_TYPES.includes(x)))] : [...ALERT_TYPES],
+        alertTypes: Array.isArray(p.alertTypes) ? [...new Set(p.alertTypes.filter((x) => ALERT_TYPES.includes(x)))] : [...ALERT_TYPES], alertsV: 2,
         createdAt: d.profile?.createdAt || t, updatedAt: t
       };
       save(d); return d.profile;
@@ -111,11 +114,12 @@ export function localRepo(namespace) {
       if (isSelfIntersecting(pts)) throw new ApiError(400, 'Los lados del polígono se cruzan: revisa el orden de las esquinas.');
       const area = polygonAreaM2(pts);
       if (area < 10) throw new ApiError(400, 'El área de la parcela es demasiado pequeña.');
+      const sowDate = /^\d{4}-\d{2}-\d{2}$/.test(p.sowDate || '') ? p.sowDate : '';
       const d = db(); const t = new Date().toISOString();
       const prev = id ? d.parcels.find((x) => x.id === id) : null;
       const parcel = {
         id: prev?.id || uid('par'), name: p.name.trim().slice(0, 80), crop: (p.crop || '').trim().slice(0, 60), coordinates: pts,
-        areaHa: Math.round(area / 100) / 100, centroid: centroid(pts), soilTexture: p.soilTexture || 'desconocido',
+        areaHa: Math.round(area / 100) / 100, centroid: centroid(pts), soilTexture: p.soilTexture || 'desconocido', sowDate,
         notes: (p.notes || '').slice(0, 500), createdAt: prev?.createdAt || t, updatedAt: t
       };
       d.parcels = prev ? d.parcels.map((x) => (x.id === id ? parcel : x)) : [...d.parcels, parcel];
@@ -144,6 +148,12 @@ export function localRepo(namespace) {
     },
     async deleteReading(parcelId, ts) { const d = db(); d.readings[parcelId] = (d.readings[parcelId] || []).filter((x) => x.ts !== ts); save(d); }
   };
+}
+
+/** ¿La parcela está en tierra firme? Máscara tierra/agua de NASA GIBS (no bloquea si el servicio no responde). */
+export async function checkLand(points) {
+  const q = points.map((p) => `${p.lat.toFixed(5)},${p.lon.toFixed(5)}`).join(';');
+  try { return await request(`/api/nasa/land?points=${encodeURIComponent(q)}`, { timeoutMs: 20000 }); } catch { return { checked: false, onLand: true }; }
 }
 
 // ---------- NASA (a través de las Azure Functions) ----------

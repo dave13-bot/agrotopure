@@ -1,4 +1,4 @@
-// Repositorio de cultivos de AGROTOPURE.
+// Repositorio de cultivos de AGRO-TOPURE.
 // Fuente principal: "Guía agronómica corregida — 68 cultivos: parámetros edafoclimáticos y manejo"
 // (México, noviembre 2026), que a su vez cita FAO-56 [1], FAO Training Manual 3 Tabla 14 [2],
 // FAO Paper 29 Anexo 1 [3] y Kew POWO [5]. Los rangos de pH, temperatura y ciclo son ORIENTATIVOS.

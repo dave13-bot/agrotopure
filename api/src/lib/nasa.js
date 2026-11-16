@@ -1,4 +1,4 @@
-// Clientes de servicios de la NASA usados por AGROTOPURE.
+// Clientes de servicios de la NASA usados por AGRO-TOPURE.
 //  - NASA POWER (LaRC): meteorología diaria, radiación solar/UV, humedad de suelo modelada y climatología.
 //  - ORNL DAAC (NASA) MODIS/VIIRS Land Product Subsets: NDVI (MOD13Q1) y temperatura de superficie (MOD11A2).
 //  - NASA EONET (GSFC): eventos naturales activos (ciclones, incendios, inundaciones, sequía…).
@@ -38,7 +38,7 @@ async function getJson(url, timeoutMs = 25000) {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
-    const r = await fetch(url, { headers: { Accept: 'application/json', 'User-Agent': 'AGROTOPURE/1.0 (NASA Space Apps 2026)' }, signal: ctrl.signal });
+    const r = await fetch(url, { headers: { Accept: 'application/json', 'User-Agent': 'AGRO-TOPURE/1.0 (NASA Space Apps 2026)' }, signal: ctrl.signal });
     const text = await r.text();
     let body;
     try { body = JSON.parse(text); } catch { body = null; }
@@ -202,15 +202,18 @@ async function ornlSeries(lat, lon, product, band, scale, offset, fill, spanDays
 /** NDVI (MOD13Q1, 250 m, 16 días) y temperatura de superficie diurna (MOD11A2, 1 km, 8 días). */
 export async function modis(lat, lon) {
   return cached(`md:${lat}:${lon}`, 12 * 3600e3, async () => {
-    const [ndvi, lst] = await Promise.allSettled([
+    const [ndvi, lst, rel] = await Promise.allSettled([
       ornlSeries(lat, lon, 'MOD13Q1', '250m_16_days_NDVI', 0.0001, 0, -3000, 140),
-      ornlSeries(lat, lon, 'MOD11A2', 'LST_Day_1km', 0.02, -273.15, 0, 72)
+      ornlSeries(lat, lon, 'MOD11A2', 'LST_Day_1km', 0.02, -273.15, 0, 72),
+      // Confiabilidad del compuesto: 0 = bueno, 1 = marginal, 2 = nieve/hielo, 3 = nublado.
+      ornlSeries(lat, lon, 'MOD13Q1', '250m_16_days_pixel_reliability', 1, 0, -1, 140)
     ]);
+    const relBy = new Map(rel.status === 'fulfilled' ? rel.value.map((x) => [x.date, x.value]) : []);
     if (ndvi.status === 'rejected' && lst.status === 'rejected') throw ndvi.reason;
     return {
-      source: 'ORNL DAAC (NASA) MODIS Land Product Subsets: MOD13Q1 NDVI, MOD11A2 LST',
+      source: 'ORNL DAAC (NASA) MODIS Land Product Subsets: MOD13Q1 NDVI y confiabilidad del píxel, MOD11A2 LST',
       location: { lat, lon },
-      ndvi: ndvi.status === 'fulfilled' ? ndvi.value.map((x) => ({ ...x, value: x.value === null ? null : Math.round(x.value * 1000) / 1000 })) : [],
+      ndvi: ndvi.status === 'fulfilled' ? ndvi.value.map((x) => ({ ...x, value: x.value === null ? null : Math.round(x.value * 1000) / 1000, reliability: relBy.has(x.date) ? relBy.get(x.date) : null })) : [],
       lstDayC: lst.status === 'fulfilled' ? lst.value.map((x) => ({ ...x, value: x.value === null ? null : Math.round(x.value * 10) / 10 })) : [],
       errors: [ndvi, lst].filter((r) => r.status === 'rejected').map((r) => r.reason?.message || 'error')
     };

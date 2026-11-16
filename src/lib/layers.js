@@ -1,5 +1,5 @@
 // Capas de mapa. Las capas de datos provienen de NASA GIBS (WMS, versión "best", fecha más reciente).
-// Los mapas base (OpenStreetMap, Esri) son solo referencia visual para dibujar la parcela.
+// Los mapas base son solo referencia visual para dibujar la parcela.
 export const GIBS_WMS = 'https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi';
 
 export const NASA_OVERLAYS = [
@@ -13,7 +13,9 @@ export const NASA_OVERLAYS = [
   { id: 'shade', name: 'Relieve sombreado ASTER GDEM (NASA)', nameEn: 'ASTER GDEM shaded relief (NASA)', layer: 'ASTER_GDEM_Color_Shaded_Relief', opacity: 0.55, legend: 'Relieve sombreado para ver laderas.', legendEn: 'Shaded relief to read hillsides.' }
 ];
 
+// Mapas base. La imagen satelital es el mosaico anual Landsat WELD de NASA GIBS (30 m, sin nubes);
+// las calles son de OpenStreetMap (datos abiertos, ODbL). No se usan mapas base con licencia restringida.
 export const BASE_LAYERS = [
-  { id: 'esri', name: 'Imagen satelital (referencia)', nameEn: 'Satellite imagery (reference)', url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', attribution: 'Imagen base © Esri, Maxar, Earthstar Geographics', maxZoom: 19 },
-  { id: 'osm', name: 'Calles (OpenStreetMap)', nameEn: 'Streets (OpenStreetMap)', url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', attribution: '© OpenStreetMap', maxZoom: 19 }
+  { id: 'landsat', name: 'Imagen Landsat 30 m (NASA)', nameEn: 'Landsat 30 m imagery (NASA)', wms: 'Landsat_WELD_CorrectedReflectance_TrueColor_Global_Annual', attribution: 'NASA GIBS · Landsat WELD', maxZoom: 19 },
+  { id: 'osm', name: 'Calles (OpenStreetMap)', nameEn: 'Streets (OpenStreetMap)', url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', attribution: '© OpenStreetMap contributors', maxZoom: 19 }
 ];

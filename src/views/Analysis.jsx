@@ -5,6 +5,8 @@ import { AlertList, AlertSettings } from '../components/Alerts.jsx';
 import { ParcelHeader, NoParcels } from '../components/ParcelPicker.jsx';
 import { ClimateChart, TimeChart } from '../components/Charts.jsx';
 import ParcelMap from '../components/ParcelMap.jsx';
+import HealthCard from '../components/HealthCard.jsx';
+import RotationPlan from '../components/RotationPlan.jsx';
 import { useI18n } from '../lib/i18n.js';
 import { useParcelData } from '../lib/useParcelData.js';
 import { ALERT_TYPES } from '../lib/alerts.js';
@@ -52,8 +54,8 @@ export default function Analysis(ctx) {
           )}
         </Card>
         <Card className="p-6 lg:col-span-5">
-          <SectionTitle eyebrow={t('analysis.modisEyebrow')} title={t('analysis.modisTitle')} />
-          {data.modisLoading ? <div className="py-10"><Spinner label="MODIS…" /></div> : data.modisError ? <div className="mt-4"><Notice tone="warn" title={t('analysis.modisError')}>{data.modisError}</Notice></div> : <ModisBlock modis={data.modisData} />}
+          <SectionTitle eyebrow={t('health.eyebrow')} title={t('health.title')} text={t('health.lead')} />
+          <HealthCard health={data.health} modis={data.modisData} crop={crop} loading={data.modisLoading} error={data.modisError} onEdit={() => go('parcelas', `editar/${selected.id}`)} />
           <div className="mt-5 overflow-hidden rounded-2xl"><ParcelMap parcels={[selected]} selectedId={selected.id} overlays={['ndvi']} height="h-[230px]" /></div>
         </Card>
       </div>
@@ -168,29 +170,6 @@ function SolarCard({ data }) {
   );
 }
 
-function ModisBlock({ modis }) {
-  const { t } = useI18n();
-  const fmt = useFmt();
-  const ndvi = (modis?.ndvi || []).filter((x) => x.value !== null);
-  const lst = (modis?.lstDayC || []).filter((x) => x.value !== null);
-  const last = ndvi[ndvi.length - 1];
-  const state = !last ? null : last.value < 0.2 ? ['analysis.ndviBare', 'amber'] : last.value < 0.4 ? ['analysis.ndviSparse', 'amber'] : last.value < 0.6 ? ['analysis.ndviModerate', 'green'] : ['analysis.ndviDense', 'green'];
-  const rows = [...new Set([...ndvi, ...lst].map((x) => x.date))].sort().map((d) => ({ date: d, ndvi: ndvi.find((x) => x.date === d)?.value ?? null, lst: lst.find((x) => x.date === d)?.value ?? null }));
-  return (
-    <div className="mt-4">
-      <StatGrid cols="grid-cols-2" items={[
-        { label: t('analysis.ndviLast'), value: last ? last.value.toFixed(2) : null, hint: last ? `MOD13Q1 · ${fmt.date(last.date)}` : null },
-        { label: t('analysis.lstDay'), value: lst.length ? fmt.num(lst[lst.length - 1].value, 1) : null, unit: '°C', hint: lst.length ? `MOD11A2 · ${fmt.date(lst[lst.length - 1].date)}` : null }
-      ]} />
-      {state && <div className="mt-3"><Badge tone={state[1]}>{t(state[0])}</Badge></div>}
-      {rows.length > 1 && <div className="mt-3"><TimeChart data={rows} height={180} brush={false} defaultRange={0} series={[{ key: 'ndvi', name: t('chart.ndvi'), color: '#176b40', type: 'line' }]} yDomain={[0, 1]} /></div>}
-      {modis?.errors?.length > 0 && <p className="mt-2 text-[11px] text-amber-700">{modis.errors.join(' · ')}</p>}
-      <p className="mt-2 text-[11px] text-slate-500">{t('analysis.modisPixel')}</p>
-    </div>
-  );
-}
-
-/** Trazabilidad: qué variable de la NASA alimenta cada resultado. */
 function ImpactCard({ fine }) {
   const { t } = useI18n();
   const rows = [
@@ -367,6 +346,7 @@ function RotationSection({ ctx, crop, profile, saveProfile, loading, locale }) {
               ))}
             </ol>
             <p className="mt-3 text-xs text-slate-600">{t(s.noteKey)}</p>
+            <RotationPlan plan={s.plan} open={s.recommended} />
             <div className="mt-3 space-y-1.5">
               {['agua', 'suelo', 'plagas', 'mercado', 'clima'].map((k) => (
                 <div key={k} className="text-[11px]">

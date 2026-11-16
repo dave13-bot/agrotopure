@@ -1,6 +1,6 @@
-# AGROTOPURE · ESP32
+# AGRO-TOPURE · ESP32
 
-Nodo de bajo consumo que lee los sensores de suelo y envía las lecturas a AGROTOPURE.
+Nodo de bajo consumo que lee los sensores de suelo y envía las lecturas a AGRO-TOPURE.
 
 ## Material
 | Sensor | Variable | Conexión |
@@ -14,7 +14,7 @@ Nodo de bajo consumo que lee los sensores de suelo y envía las lecturas a AGROT
 Usa solo pines ADC1 (32-39): ADC2 no funciona con WiFi activo.
 
 ## Pasos
-1. En AGROTOPURE: **Sensores → Dispositivo**, elige la parcela y copia la configuración.
+1. En AGRO-TOPURE: **Sensores → Dispositivo**, elige la parcela y copia la configuración.
 2. Copia `config.example.h` como `config.h` y pega `AGROTOPURE_URL`, `DEVICE_ID`, `DEVICE_KEY` y tu WiFi.
 3. Certificado raíz (recomendado): obtén el certificado raíz de tu sitio y pégalo en `ROOT_CA`:
    ```bash

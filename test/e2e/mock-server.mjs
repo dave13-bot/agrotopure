@@ -12,7 +12,7 @@ const root = resolve(process.argv[2] || 'dist');
 const port = Number(process.argv[3] || 4173);
 const storage = process.argv[4] !== 'nostorage';
 const store = new MemoryStore();
-const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.json': 'application/json', '.woff2': 'font/woff2', '.woff': 'font/woff', '.png': 'image/png' };
+const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.json': 'application/json', '.woff2': 'font/woff2', '.woff': 'font/woff', '.jpg': 'image/jpeg', '.png': 'image/png' };
 
 const user = (req) => {
   const m = /mockuser=([^;]+)/.exec(req.headers.cookie || '');
@@ -49,7 +49,7 @@ const eonet = {
   ]
 };
 const clim = { source: 'mock', period: '2001-2020', months: [[17, 25, 9, 1.0], [18, 27, 9, 0.6], [20, 29, 11, 0.5], [22, 31, 13, 0.6], [23, 31, 15, 2.5], [22, 28, 16, 8.0], [21, 26, 16, 10.5], [21, 26, 16, 10.0], [21, 26, 16, 8.5], [20, 26, 14, 3.5], [19, 26, 11, 1.2], [17, 25, 9, 1.0]].map(([t2m, tmax, tmin, precipDay], i) => ({ month: i + 1, t2m, tmax, tmin, precipDay, rh: 60, rad: 20, wind: 2, gwettop: 0.4, gwetroot: 0.5 })) };
-const modis = { source: 'mock', ndvi: [['2026-09-14', 0.71], ['2026-09-30', 0.66], ['2026-10-16', 0.58], ['2026-11-01', 0.52]].map(([date, value]) => ({ date, value })), lstDayC: [{ date: '2026-11-01', value: 27.4 }], errors: [] };
+const modis = { source: 'mock', ndvi: [['2026-09-14', 0.71], ['2026-09-30', 0.66], ['2026-10-16', 0.58], ['2026-11-01', 0.52]].map(([date, value]) => ({ date, value, reliability: 0 })), lstDayC: [{ date: '2026-11-01', value: 27.4 }], errors: [] };
 
 http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://localhost:${port}`);
@@ -65,6 +65,12 @@ http.createServer(async (req, res) => {
       if (route === 'nasa/climatology') return send(res, 200, clim);
       if (route === 'nasa/modis') return send(res, 200, modis);
       if (route === 'nasa/eonet') return send(res, 200, eonet);
+      if (route === 'nasa/land') {
+        // Emula la máscara tierra/agua: al oeste de -104° es océano Pacífico.
+        const pts = (new URL(req.url, 'http://x').searchParams.get('points') || '').split(';').map((q) => q.split(',').map(Number));
+        const water = pts.filter(([, lon]) => lon < -104).length / pts.length;
+        return send(res, 200, { checked: true, onLand: water <= 0.25, waterFraction: water, centroidWater: water > 0.5 });
+      }
       if (route === 'ingest') return send(res, 200, await svc.ingest(store, req.headers['x-device-id'], req.headers['x-device-key'], await body(req)));
       const u = user(req);
       if (!u) return send(res, 401, { error: 'unauthenticated' });

@@ -1,6 +1,6 @@
 {
-  "name": "AGROTOPURE",
-  "short_name": "AGROTOPURE",
+  "name": "AGRO-TOPURE",
+  "short_name": "AGRO-TOPURE",
   "description": "Fusión de datos NASA + sensores de suelo para rotación de cultivos y salud del suelo.",
   "lang": "es-MX",
   "start_url": "/",
